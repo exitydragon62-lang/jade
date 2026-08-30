@@ -180,7 +180,7 @@
 
     <div id="chat">
       <div class="msg msg-jade">
-        💜 <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para te ajudar com Ensino Fundamental, Médio e Programação!
+        💜 <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para te ajudar com Ensino Fundamental, Médio, Programação ou abrir seus sites e arquivos!
       </div>
     </div>
 
@@ -189,6 +189,8 @@
       <button onclick="enviar()">Enviar</button>
       <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">🎤</button>
     </div>
+
+    <input type="file" id="seletorArquivo" style="display: none;" onchange="arquivoSelecionado(event)">
 
     <div class="footer-actions">
       <span class="shortcut-hint">Dica: Segure <b>C</b> para falar</span>
@@ -199,7 +201,7 @@
 <script>
   let memoria = JSON.parse(localStorage.getItem("jade_memoria")) || { conhecimentos: [] };
   let modoAprendizado = false;
-  let etapaAprendizado = 0; // 0: inativo, 1: aguardando pergunta, 2: aguardando resposta
+  let etapaAprendizado = 0;
   let perguntaTemp = "";
   let gravacaoAtiva = false;
   let rec = null;
@@ -207,6 +209,7 @@
   const inputEl = document.getElementById("mensagem");
   const chatEl = document.getElementById("chat");
   const btnMic = document.getElementById("btnOuvir");
+  const seletorArquivo = document.getElementById("seletorArquivo");
 
   inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter") enviar();
@@ -276,6 +279,18 @@
               .replace(/(.)\1+/g, '$1');
   }
 
+  // Função para lidar com o arquivo local selecionado pelo usuário
+  function arquivoSelecionado(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const urlArquivo = URL.createObjectURL(file);
+      window.open(urlArquivo, '_blank');
+      const rep = `Abrindo o arquivo "${file.name}", Mestre! 💜`;
+      escrever(rep, "jade");
+      falar(rep);
+    }
+  }
+
   async function buscarNaWeb(termo) {
     try {
       const url = `https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(termo)}`;
@@ -296,6 +311,18 @@
     const orig = msg.toLowerCase().trim();
     const txt = normalizar(orig);
 
+    // --- Comando: Abertura do YouTube
+    if (txt.includes("abrir youtube") || txt.includes("abre o youtube") || txt.includes("toca youtube")) {
+      window.open("https://www.youtube.com", "_blank");
+      return "Abrindo o YouTube para você agora mesmo, Mestre! 🎬💜";
+    }
+
+    // --- Comando: Abertura de Arquivos do Dispositivo
+    if (txt.includes("abrir arquivo") || txt.includes("abrir o arquivo") || txt.includes("abre arquivo")) {
+      seletorArquivo.click();
+      return "Selecione o arquivo do seu dispositivo que deseja abrir, Mestre! 📁💜";
+    }
+
     // --- Criador
     if (txt.includes("criador") || txt.includes("quem te fez") || txt.includes("seu mestre") || txt.includes("luiz benicio")) {
       return "Meu único mestre e criador é o Luiz Benicio! ✨💜";
@@ -306,7 +333,7 @@
       return "Olá, Mestre! Como posso te ajudar agora? 💜";
     }
     if (txt.includes("bom dia")) return "Bom dia, Mestre! Excelente dia de aprendizado para nós ☀️💜";
-    if (txt.includes("boa tarde")) return "Boa tarde, Mestre! Em que posso ser útil? asp🌆💜";
+    if (txt.includes("boa tarde")) return "Boa tarde, Mestre! Em que posso ser útil? 🌆💜";
     if (txt.includes("boa noite")) return "Boa noite, Mestre! Que seu descanso seja restaurador 🌙💜";
 
     // --- Programação Base
@@ -353,7 +380,7 @@
 
     const txtNorm = normalizar(msg);
 
-    // 1. SE O MESTRE INICIAR O APRENDIZADO ("posso te ensinar", "quero te ensinar algo", etc.)
+    // 1. INICIAR MODO APRENDIZADO PELO MESTRE
     if (!modoAprendizado && (txtNorm.includes("posso te ensinar") || txtNorm.includes("quero te ensinar") || txtNorm.includes("vou te ensinar") || txtNorm.includes("ensinar algo"))) {
       modoAprendizado = true;
       etapaAprendizado = 1;
@@ -397,17 +424,17 @@
       }
     }
 
-    // 3. CONSULTA NORMAL / BUSCA DE RESPOSTAS
+    // 3. CONSULTA NORMAL / BUSCA DE RESPOSTAS E COMANDOS
     const resposta = await pensar(msg);
 
     if (resposta) {
       escrever(resposta, "jade");
       falar(resposta);
     } else {
-      // 4. SE ELA NÃO SOUBER A RESPOSTA, PERGUNTA E ENTRA NO MODO APRENDIZADO DIRETO
+      // 4. MODO APRENDIZADO QUANDO NÃO SOUBER A RESPOSTA
       perguntaTemp = msg;
       modoAprendizado = true;
-      etapaAprendizado = 2; // Já pula direto para pedir a resposta!
+      etapaAprendizado = 2;
 
       const repPedindoAjuda = "Ainda não sei sobre isso, Mestre! Posso te ensinar? O que eu deveria responder quando você me diz isso?";
       escrever(repPedindoAjuda, "jade");
