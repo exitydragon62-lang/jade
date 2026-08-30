@@ -163,6 +163,12 @@
       color: #ff4d4d;
     }
 
+    a.link-abrir {
+      color: #b366ff;
+      font-weight: bold;
+      text-decoration: underline;
+    }
+
     @keyframes pulse {
       0% { opacity: 1; }
       50% { opacity: 0.5; }
@@ -180,7 +186,7 @@
 
     <div id="chat">
       <div class="msg msg-jade">
-        💜 <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para te ajudar com Ensino Fundamental, Médio, Programação ou abrir seus sites e arquivos!
+        💜 <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para responder suas dúvidas ou abrir o YouTube e arquivos para você!
       </div>
     </div>
 
@@ -279,13 +285,13 @@
               .replace(/(.)\1+/g, '$1');
   }
 
-  // Função para lidar com o arquivo local selecionado pelo usuário
+  // Visualizador e Abertura de Arquivo Escolhido
   function arquivoSelecionado(event) {
     const file = event.target.files[0];
     if (file) {
       const urlArquivo = URL.createObjectURL(file);
       window.open(urlArquivo, '_blank');
-      const rep = `Abrindo o arquivo "${file.name}", Mestre! 💜`;
+      const rep = `Abrindo o arquivo "${file.name}" para você, Mestre! 💜`;
       escrever(rep, "jade");
       falar(rep);
     }
@@ -311,16 +317,24 @@
     const orig = msg.toLowerCase().trim();
     const txt = normalizar(orig);
 
-    // --- Comando: Abertura do YouTube
-    if (txt.includes("abrir youtube") || txt.includes("abre o youtube") || txt.includes("toca youtube")) {
-      window.open("https://www.youtube.com", "_blank");
+    // --- COMANDO: ABRIR YOUTUBE
+    if (txt.includes("youtube") || txt.includes("abrir youtube") || txt.includes("abre youtube")) {
+      // Abre direto na aba
+      const novaAba = window.open("https://www.youtube.com", "_blank");
+      
+      // Se o navegador bloquear o pop-up, cria um link direto na conversa
+      if (!novaAba || novaAba.closed || typeof novaAba.closed=='undefined') {
+        return 'Tentei abrir o YouTube! Se o seu navegador bloqueou a janela, <a href="https://www.youtube.com" target="_blank" class="link-abrir">clique aqui para abrir</a> Mestre! 🎬💜';
+      }
       return "Abrindo o YouTube para você agora mesmo, Mestre! 🎬💜";
     }
 
-    // --- Comando: Abertura de Arquivos do Dispositivo
-    if (txt.includes("abrir arquivo") || txt.includes("abrir o arquivo") || txt.includes("abre arquivo")) {
-      seletorArquivo.click();
-      return "Selecione o arquivo do seu dispositivo que deseja abrir, Mestre! 📁💜";
+    // --- COMANDO: ABRIR ARQUIVOS (PC / CELULAR)
+    if (txt.includes("arquivo") || txt.includes("abrir arquivo") || txt.includes("abre o arquivo")) {
+      setTimeout(() => {
+        seletorArquivo.click();
+      }, 300);
+      return "Abrindo a janela de arquivos do seu dispositivo para você selecionar, Mestre! 📁💜";
     }
 
     // --- Criador
