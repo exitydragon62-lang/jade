@@ -180,7 +180,7 @@
 
     <div id="chat">
       <div class="msg msg-jade">
-        💜 <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Tenho acesso a todas as matérias do Ensino Fundamental, Médio e Programação! Como posso te ajudar hoje?
+        💜 <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para te ajudar com Ensino Fundamental, Médio e Programação!
       </div>
     </div>
 
@@ -199,8 +199,7 @@
 <script>
   let memoria = JSON.parse(localStorage.getItem("jade_memoria")) || { conhecimentos: [] };
   let aprendendo = false;
-  let etapaAprendizado = 0;
-  let novaPergunta = "";
+  let perguntaParaEnsinar = "";
   let gravacaoAtiva = false;
   let rec = null;
 
@@ -276,14 +275,13 @@
               .replace(/(.)\1+/g, '$1');
   }
 
-  // Busca na Wikipedia em Português para cobrir todo o ensino fundamental/médio
   async function buscarNaWeb(termo) {
     try {
       const url = `https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(termo)}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        if (data.extract) {
+        if (data.extract && data.type !== "disambiguation") {
           return data.extract;
         }
       }
@@ -332,13 +330,14 @@
       } catch (e) {}
     }
 
-    // --- Busca Inteligente na Wikipédia (Conhecimento do Ensino Médio/Fundamental)
+    // --- Busca Inteligente na Wikipédia (Matérias Escolares)
     const termoBusca = orig.replace(/o que e|quem foi|como funciona|o que significa|me explique|fale sobre/gi, "").trim();
-    const resultadoWeb = await buscarNaWeb(termoBusca || orig);
-    if (resultadoWeb) {
-      // Limita a resposta para ficar curta e legível
-      const resumo = resultadoWeb.length > 280 ? resultadoWeb.substring(0, 280) + "..." : resultadoWeb;
-      return `${resumo} 💜`;
+    if (termoBusca.length > 2) {
+      const resultadoWeb = await buscarNaWeb(termoBusca);
+      if (resultadoWeb) {
+        const resumo = resultadoWeb.length > 280 ? resultadoWeb.substring(0, 280) + "..." : resultadoWeb;
+        return `${resumo} 💜`;
+      }
     }
 
     return null;
@@ -351,50 +350,40 @@
     escrever(msg, "user");
     inputEl.value = "";
 
-    const txtNorm = normalizar(msg);
+    // Se a Jade perguntou o que deveria responder na mensagem anterior
+    if (aprendendo) {
+      const pLimpa = perguntaParaEnsinar.toLowerCase().trim();
+      const existe = memoria.conhecimentos.find(item => item.pergunta === pLimpa);
+      
+      if (existe) {
+        existe.resposta = msg;
+      } else {
+        memoria.conhecimentos.push({ pergunta: pLimpa, resposta: msg });
+      }
+      salvarMemoria();
 
-    // Modo Aprendizado
-    if (!aprendendo && (txtNorm.includes("posso te ensinar") || txtNorm.includes("quero te ensinar") || txtNorm.includes("aprender algo"))) {
-      aprendendo = true;
-      etapaAprendizado = 1;
-      const r1 = "Com certeza, Mestre! O que você quer que eu responda quando falarem algo? Envie a pergunta ou palavra-chave:";
-      escrever(r1, "jade");
-      falar(r1);
+      aprendendo = false;
+      perguntaParaEnsinar = "";
+
+      const repAprendido = "Entendido, Mestre! Aprendi! Da próxima vez que me perguntarem isso, já vou saber responder! 💜";
+      escrever(repAprendido, "jade");
+      falar(repAprendido);
       return;
     }
 
-    if (aprendendo) {
-      if (etapaAprendizado === 1) {
-        novaPergunta = msg;
-        etapaAprendizado = 2;
-        const r2 = `Entendido! E o que eu devo responder quando me perguntarem "${novaPergunta}"?`;
-        escrever(r2, "jade");
-        falar(r2);
-        return;
-      } else if (etapaAprendizado === 2) {
-        const pLimpa = novaPergunta.toLowerCase().trim();
-        memoria.conhecimentos.push({ pergunta: pLimpa, resposta: msg });
-        salvarMemoria();
-
-        aprendendo = false;
-        etapaAprendizado = 0;
-        const r3 = "Perfeito, Mestre! Aprendi e guardei em minha memória! 💜";
-        escrever(r3, "jade");
-        falar(r3);
-        return;
-      }
-    }
-
-    // Resposta com suporte à busca web para o Ensino Médio/Fundamental
     const resposta = await pensar(msg);
 
     if (resposta) {
       escrever(resposta, "jade");
       falar(resposta);
     } else {
-      const semResposta = "Não encontrei essa informação nos meus dados do Ensino Médio nem na web, Mestre. Se quiser, diga 'Posso te ensinar algo' para me treinar! 💜";
-      escrever(semResposta, "jade");
-      falar(semResposta);
+      // Quando ela NÃO SOUBER, pergunta exatamente isso e entra no modo aprendizado
+      perguntaParaEnsinar = msg;
+      aprendendo = true;
+
+      const repPedindoAjuda = "Ainda não sei sobre isso, Mestre! Posso te ensinar? O que eu deveria responder quando você me diz isso?";
+      escrever(repPedindoAjuda, "jade");
+      falar(repPedindoAjuda);
     }
   }
 
@@ -455,3 +444,4 @@
 
 </body>
 </html>
+
