@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jade IA 💜</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0d0814;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 15px;
+      color: #ffffff;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 450px;
+      background: #181124;
+      padding: 20px;
+      border-radius: 20px;
+      border: 1px solid #3b235d;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(138, 43, 226, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .header {
+      text-align: center;
+    }
+
+    h1 {
+      color: #b366ff;
+      margin: 0;
+      font-size: 26px;
+      text-shadow: 0 0 8px rgba(179, 102, 255, 0.4);
+    }
+
+    .subtitle {
+      color: #a0a0b0;
+      font-size: 13px;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    #chat {
+      background: #09050e;
+      height: 380px;
+      overflow-y: auto;
+      padding: 15px;
+      border-radius: 14px;
+      border: 1px solid #2a1942;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+
+    .msg {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 15px;
+      font-size: 14px;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+
+    .msg-jade {
+      align-self: flex-start;
+      background: #251638;
+      color: #f0e6ff;
+      border-bottom-left-radius: 2px;
+      border: 1px solid #4c287a;
+    }
+
+    .msg-user {
+      align-self: flex-end;
+      background: #7928ca;
+      color: #ffffff;
+      border-bottom-right-radius: 2px;
+    }
+
+    .input-box {
+      display: flex;
+      gap: 8px;
+    }
+
+    input {
+      flex: 1;
+      padding: 12px 15px;
+      background: #09050e;
+      border: 1px solid #3b235d;
+      border-radius: 12px;
+      outline: none;
+      font-size: 14px;
+      color: #ffffff;
+    }
+
+    input:focus {
+      border-color: #9d4edf;
+      box-shadow: 0 0 8px rgba(157, 78, 223, 0.4);
+    }
+
+    button {
+      padding: 12px 15px;
+      border: 0;
+      border-radius: 12px;
+      background: #7928ca;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      background: #9d4edf;
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+
+    .btn-mic {
+      background: #4c287a;
+      user-select: none;
+    }
+
+    .btn-mic.recording {
+      background: #ff2a6d;
+      animation: pulse 1s infinite;
+    }
+
+    .footer-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .shortcut-hint {
+      font-size: 11px;
+      color: #6e6e8d;
+    }
+
+    .btn-clear {
+      background: transparent;
+      color: #a0a0b0;
+      font-size: 11px;
+      padding: 0;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .btn-clear:hover {
+      color: #ff4d4d;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app">
+    <div class="header">
+      <h1>💜 Jade IA</h1>
+      <div class="subtitle">Criada por Luiz Benicio ✨</div>
+    </div>
+
+    <div id="chat">
+      <div class="msg msg-jade">
+        💜 <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Tenho acesso a todas as matérias do Ensino Fundamental, Médio e Programação! Como posso te ajudar hoje?
+      </div>
+    </div>
+
+    <div class="input-box">
+      <input id="mensagem" placeholder="Digite ou segure 'C' para falar..." autocomplete="off">
+      <button onclick="enviar()">Enviar</button>
+      <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">🎤</button>
+    </div>
+
+    <div class="footer-actions">
+      <span class="shortcut-hint">Dica: Segure <b>C</b> para falar</span>
+      <button class="btn-clear" onclick="limparMemoria()">Resetar aprendizado</button>
+    </div>
+  </div>
+
+<script>
+  let memoria = JSON.parse(localStorage.getItem("jade_memoria")) || { conhecimentos: [] };
+  let aprendendo = false;
+  let etapaAprendizado = 0;
+  let novaPergunta = "";
+  let gravacaoAtiva = false;
+  let rec = null;
+
+  const inputEl = document.getElementById("mensagem");
+  const chatEl = document.getElementById("chat");
+  const btnMic = document.getElementById("btnOuvir");
+
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") enviar();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if ((e.key === "c" || e.key === "C") && document.activeElement !== inputEl && !gravacaoAtiva) {
+      iniciarGravacao();
+    }
+  });
+
+  window.addEventListener("keyup", (e) => {
+    if ((e.key === "c" || e.key === "C") && gravacaoAtiva) {
+      pararGravacao();
+    }
+  });
+
+  function salvarMemoria() {
+    localStorage.setItem("jade_memoria", JSON.stringify(memoria));
+  }
+
+  function limparMemoria() {
+    if (confirm("Mestre, deseja apagar todo o aprendizado personalizado?")) {
+      memoria.conhecimentos = [];
+      salvarMemoria();
+      escrever("Minha memória de novos ensinamentos foi resetada, Mestre! 💜", "jade");
+    }
+  }
+
+  function falar(texto) {
+    if (!('speechSynthesis' in window)) return;
+    const textoLimpo = texto.replace(/<[^>]*>?/gm, '');
+    
+    speechSynthesis.cancel();
+    const voz = new SpeechSynthesisUtterance(textoLimpo);
+    voz.lang = "pt-BR";
+    voz.pitch = 1.2;
+    voz.rate = 1.0;
+
+    const voces = speechSynthesis.getVoices();
+    const vozFeminina = voces.find(v => v.lang.includes("pt") && (v.name.includes("Luciana") || v.name.includes("Yelda") || v.name.includes("Google português do Brasil") || v.name.includes("Maria") || v.name.includes("Helena")));
+    
+    if (vozFeminina) voz.voice = vozFeminina;
+
+    speechSynthesis.speak(voz);
+  }
+
+  function escrever(texto, remetente) {
+    const div = document.createElement("div");
+    div.classList.add("msg");
+    
+    if (remetente === "user") {
+      div.classList.add("msg-user");
+      div.innerHTML = `<b>Mestre:</b> ${texto}`;
+    } else {
+      div.classList.add("msg-jade");
+      div.innerHTML = `💜 <b>Jade:</b> ${texto}`;
+    }
+
+    chatEl.appendChild(div);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  function normalizar(txt) {
+    return txt.toLowerCase()
+              .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+              .replace(/(.)\1+/g, '$1');
+  }
+
+  // Busca na Wikipedia em Português para cobrir todo o ensino fundamental/médio
+  async function buscarNaWeb(termo) {
+    try {
+      const url = `https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(termo)}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.extract) {
+          return data.extract;
+        }
+      }
+    } catch (e) {
+      console.log("Erro na busca online", e);
+    }
+    return null;
+  }
+
+  async function pensar(msg) {
+    const orig = msg.toLowerCase().trim();
+    const txt = normalizar(orig);
+
+    // --- Criador
+    if (txt.includes("criador") || txt.includes("quem te fez") || txt.includes("seu mestre") || txt.includes("luiz benicio")) {
+      return "Meu único mestre e criador é o Luiz Benicio! ✨💜";
+    }
+
+    // --- Saudações
+    if (txt.includes("oi") || txt.includes("ola") || txt.includes("oie") || txt.includes("hey")) {
+      return "Olá, Mestre! Como posso te ajudar agora? 💜";
+    }
+    if (txt.includes("bom dia")) return "Bom dia, Mestre! Excelente dia de aprendizado para nós ☀️💜";
+    if (txt.includes("boa tarde")) return "Boa tarde, Mestre! Em que posso ser útil? 🌆💜";
+    if (txt.includes("boa noite")) return "Boa noite, Mestre! Que seu descanso seja restaurador 🌙💜";
+
+    // --- Programação Base
+    if (txt.includes("javascript") || txt.includes("js")) return "JavaScript é a linguagem padrão da web! Usada para front-end interativo e back-end com Node.js.";
+    if (txt.includes("lua")) return "Lua é uma linguagem brasileira super leve, usada no Roblox, games e sistemas embarcados!";
+    if (txt.includes("html")) return "HTML é a linguagem de marcação estrutural da Web, feita através de tags.";
+    if (txt.includes("css")) return "CSS é a linguagem de estilos usada para dar cor, layout e animações às páginas HTML.";
+
+    // --- Memória Aprendida
+    for (let item of memoria.conhecimentos) {
+      if (orig === item.pergunta || txt === normalizar(item.pergunta)) {
+        return item.resposta;
+      }
+    }
+
+    // --- Resolução de Expressões Matemáticas
+    const expressao = orig.match(/[0-9]+\s*[\+\-\*\/]\s*[0-9]+/);
+    if (expressao) {
+      try {
+        const res = new Function(`return ${expressao[0]}`)();
+        return `O resultado da conta é: <b>${res}</b> 💜`;
+      } catch (e) {}
+    }
+
+    // --- Busca Inteligente na Wikipédia (Conhecimento do Ensino Médio/Fundamental)
+    const termoBusca = orig.replace(/o que e|quem foi|como funciona|o que significa|me explique|fale sobre/gi, "").trim();
+    const resultadoWeb = await buscarNaWeb(termoBusca || orig);
+    if (resultadoWeb) {
+      // Limita a resposta para ficar curta e legível
+      const resumo = resultadoWeb.length > 280 ? resultadoWeb.substring(0, 280) + "..." : resultadoWeb;
+      return `${resumo} 💜`;
+    }
+
+    return null;
+  }
+
+  async function enviar() {
+    const msg = inputEl.value.trim();
+    if (!msg) return;
+
+    escrever(msg, "user");
+    inputEl.value = "";
+
+    const txtNorm = normalizar(msg);
+
+    // Modo Aprendizado
+    if (!aprendendo && (txtNorm.includes("posso te ensinar") || txtNorm.includes("quero te ensinar") || txtNorm.includes("aprender algo"))) {
+      aprendendo = true;
+      etapaAprendizado = 1;
+      const r1 = "Com certeza, Mestre! O que você quer que eu responda quando falarem algo? Envie a pergunta ou palavra-chave:";
+      escrever(r1, "jade");
+      falar(r1);
+      return;
+    }
+
+    if (aprendendo) {
+      if (etapaAprendizado === 1) {
+        novaPergunta = msg;
+        etapaAprendizado = 2;
+        const r2 = `Entendido! E o que eu devo responder quando me perguntarem "${novaPergunta}"?`;
+        escrever(r2, "jade");
+        falar(r2);
+        return;
+      } else if (etapaAprendizado === 2) {
+        const pLimpa = novaPergunta.toLowerCase().trim();
+        memoria.conhecimentos.push({ pergunta: pLimpa, resposta: msg });
+        salvarMemoria();
+
+        aprendendo = false;
+        etapaAprendizado = 0;
+        const r3 = "Perfeito, Mestre! Aprendi e guardei em minha memória! 💜";
+        escrever(r3, "jade");
+        falar(r3);
+        return;
+      }
+    }
+
+    // Resposta com suporte à busca web para o Ensino Médio/Fundamental
+    const resposta = await pensar(msg);
+
+    if (resposta) {
+      escrever(resposta, "jade");
+      falar(resposta);
+    } else {
+      const semResposta = "Não encontrei essa informação nos meus dados do Ensino Médio nem na web, Mestre. Se quiser, diga 'Posso te ensinar algo' para me treinar! 💜";
+      escrever(semResposta, "jade");
+      falar(semResposta);
+    }
+  }
+
+  function iniciarGravacao(e) {
+    if (e) e.preventDefault();
+    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!Speech) {
+      alert("Seu navegador não suporta reconhecimento de voz.");
+      return;
+    }
+
+    if (gravacaoAtiva) return;
+
+    rec = new Speech();
+    rec.lang = "pt-BR";
+    rec.continuous = true;
+    rec.interimResults = true;
+
+    rec.onstart = () => {
+      gravacaoAtiva = true;
+      btnMic.classList.add("recording");
+    };
+
+    rec.onresult = (e) => {
+      let textoTranscrito = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        textoTranscrito += e.results[i][0].transcript;
+      }
+      inputEl.value = textoTranscrito;
+    };
+
+    rec.onerror = () => pararGravacao();
+    rec.start();
+  }
+
+  function pararGravacao(e) {
+    if (e) e.preventDefault();
+    if (!gravacaoAtiva) return;
+
+    gravacaoAtiva = false;
+    btnMic.classList.remove("recording");
+
+    if (rec) {
+      rec.stop();
+      setTimeout(() => {
+        if (inputEl.value.trim() !== "") {
+          enviar();
+        }
+      }, 400);
+    }
+  }
+
+  if ('speechSynthesis' in window) {
+    speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+  }
+</script>
+
+</body>
+</html>
