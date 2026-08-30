@@ -198,8 +198,9 @@
 
 <script>
   let memoria = JSON.parse(localStorage.getItem("jade_memoria")) || { conhecimentos: [] };
-  let aprendendo = false;
-  let perguntaParaEnsinar = "";
+  let modoAprendizado = false;
+  let etapaAprendizado = 0; // 0: inativo, 1: aguardando pergunta, 2: aguardando resposta
+  let perguntaTemp = "";
   let gravacaoAtiva = false;
   let rec = null;
 
@@ -305,7 +306,7 @@
       return "Olá, Mestre! Como posso te ajudar agora? 💜";
     }
     if (txt.includes("bom dia")) return "Bom dia, Mestre! Excelente dia de aprendizado para nós ☀️💜";
-    if (txt.includes("boa tarde")) return "Boa tarde, Mestre! Em que posso ser útil? 🌆💜";
+    if (txt.includes("boa tarde")) return "Boa tarde, Mestre! Em que posso ser útil? asp🌆💜";
     if (txt.includes("boa noite")) return "Boa noite, Mestre! Que seu descanso seja restaurador 🌙💜";
 
     // --- Programação Base
@@ -350,36 +351,63 @@
     escrever(msg, "user");
     inputEl.value = "";
 
-    // Se a Jade perguntou o que deveria responder na mensagem anterior
-    if (aprendendo) {
-      const pLimpa = perguntaParaEnsinar.toLowerCase().trim();
-      const existe = memoria.conhecimentos.find(item => item.pergunta === pLimpa);
-      
-      if (existe) {
-        existe.resposta = msg;
-      } else {
-        memoria.conhecimentos.push({ pergunta: pLimpa, resposta: msg });
-      }
-      salvarMemoria();
+    const txtNorm = normalizar(msg);
 
-      aprendendo = false;
-      perguntaParaEnsinar = "";
+    // 1. SE O MESTRE INICIAR O APRENDIZADO ("posso te ensinar", "quero te ensinar algo", etc.)
+    if (!modoAprendizado && (txtNorm.includes("posso te ensinar") || txtNorm.includes("quero te ensinar") || txtNorm.includes("vou te ensinar") || txtNorm.includes("ensinar algo"))) {
+      modoAprendizado = true;
+      etapaAprendizado = 1;
 
-      const repAprendido = "Entendido, Mestre! Aprendi! Da próxima vez que me perguntarem isso, já vou saber responder! 💜";
-      escrever(repAprendido, "jade");
-      falar(repAprendido);
+      const r1 = "Com certeza, Mestre! O que você quer me ensinar? Digite a pergunta ou mensagem que vão me falar:";
+      escrever(r1, "jade");
+      falar(r1);
       return;
     }
 
+    // 2. FLUXO DO MODO DE APRENDIZADO
+    if (modoAprendizado) {
+      if (etapaAprendizado === 1) {
+        perguntaTemp = msg;
+        etapaAprendizado = 2;
+
+        const r2 = `Entendido! E o que eu devo responder quando me disserem "${perguntaTemp}"?`;
+        escrever(r2, "jade");
+        falar(r2);
+        return;
+      } 
+      else if (etapaAprendizado === 2) {
+        const pLimpa = perguntaTemp.toLowerCase().trim();
+        const existe = memoria.conhecimentos.find(item => item.pergunta === pLimpa);
+
+        if (existe) {
+          existe.resposta = msg;
+        } else {
+          memoria.conhecimentos.push({ pergunta: pLimpa, resposta: msg });
+        }
+        salvarMemoria();
+
+        modoAprendizado = false;
+        etapaAprendizado = 0;
+        perguntaTemp = "";
+
+        const r3 = "Perfeito, Mestre! Aprendi! Da próxima vez já saberei exatamente o que responder! 💜";
+        escrever(r3, "jade");
+        falar(r3);
+        return;
+      }
+    }
+
+    // 3. CONSULTA NORMAL / BUSCA DE RESPOSTAS
     const resposta = await pensar(msg);
 
     if (resposta) {
       escrever(resposta, "jade");
       falar(resposta);
     } else {
-      // Quando ela NÃO SOUBER, pergunta exatamente isso e entra no modo aprendizado
-      perguntaParaEnsinar = msg;
-      aprendendo = true;
+      // 4. SE ELA NÃO SOUBER A RESPOSTA, PERGUNTA E ENTRA NO MODO APRENDIZADO DIRETO
+      perguntaTemp = msg;
+      modoAprendizado = true;
+      etapaAprendizado = 2; // Já pula direto para pedir a resposta!
 
       const repPedindoAjuda = "Ainda não sei sobre isso, Mestre! Posso te ensinar? O que eu deveria responder quando você me diz isso?";
       escrever(repPedindoAjuda, "jade");
@@ -444,4 +472,3 @@
 
 </body>
 </html>
-
