@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jade IA 💜</title>
+  <title>Jade IA</title>
   <style>
     * {
       box-sizing: border-box;
@@ -180,20 +180,20 @@
 
   <div class="app">
     <div class="header">
-      <h1>💜 Jade IA</h1>
-      <div class="subtitle">Criada por Luiz Benicio ✨</div>
+      <h1>Jade IA</h1>
+      <div class="subtitle">Criada por Luiz Benicio</div>
     </div>
 
     <div id="chat">
       <div class="msg msg-jade">
-        💜 <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para responder suas dúvidas ou abrir o YouTube e arquivos para você!
+        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para responder suas dúvidas sobre qualquer assunto, abrir sites, arquivos e aprender com você.
       </div>
     </div>
 
     <div class="input-box">
       <input id="mensagem" placeholder="Digite ou segure 'C' para falar..." autocomplete="off">
       <button onclick="enviar()">Enviar</button>
-      <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">🎤</button>
+      <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">Falar</button>
     </div>
 
     <input type="file" id="seletorArquivo" style="display: none;" onchange="arquivoSelecionado(event)">
@@ -241,13 +241,17 @@
     if (confirm("Mestre, deseja apagar todo o aprendizado personalizado?")) {
       memoria.conhecimentos = [];
       salvarMemoria();
-      escrever("Minha memória de novos ensinamentos foi resetada, Mestre! 💜", "jade");
+      escrever("Minha memória de novos ensinamentos foi resetada, Mestre!", "jade");
     }
   }
 
   function falar(texto) {
     if (!('speechSynthesis' in window)) return;
-    const textoLimpo = texto.replace(/<[^>]*>?/gm, '');
+    
+    let textoLimpo = texto.replace(/<[^>]*>?/gm, '');
+    if (textoLimpo.length > 300) {
+      textoLimpo = textoLimpo.substring(0, 300) + "... O restante do texto está exibido no chat, Mestre!";
+    }
     
     speechSynthesis.cancel();
     const voz = new SpeechSynthesisUtterance(textoLimpo);
@@ -272,7 +276,7 @@
       div.innerHTML = `<b>Mestre:</b> ${texto}`;
     } else {
       div.classList.add("msg-jade");
-      div.innerHTML = `💜 <b>Jade:</b> ${texto}`;
+      div.innerHTML = `<b>Jade:</b> ${texto}`;
     }
 
     chatEl.appendChild(div);
@@ -285,19 +289,18 @@
               .replace(/(.)\1+/g, '$1');
   }
 
-  // Visualizador e Abertura de Arquivo Escolhido
   function arquivoSelecionado(event) {
     const file = event.target.files[0];
     if (file) {
       const urlArquivo = URL.createObjectURL(file);
       window.open(urlArquivo, '_blank');
-      const rep = `Abrindo o arquivo "${file.name}" para você, Mestre! 💜`;
+      const rep = `Abrindo o arquivo "${file.name}" para você, Mestre!`;
       escrever(rep, "jade");
       falar(rep);
     }
   }
 
-  async function buscarNaWeb(termo) {
+  async function pesquisarConceitoCompleto(termo) {
     try {
       const url = `https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(termo)}`;
       const res = await fetch(url);
@@ -308,7 +311,7 @@
         }
       }
     } catch (e) {
-      console.log("Erro na busca online", e);
+      console.log("Erro ao pesquisar conceito", e);
     }
     return null;
   }
@@ -319,36 +322,31 @@
 
     // --- COMANDO: ABRIR YOUTUBE
     if (txt.includes("youtube") || txt.includes("abrir youtube") || txt.includes("abre youtube")) {
-      // Abre direto na aba
       const novaAba = window.open("https://www.youtube.com", "_blank");
-      
-      // Se o navegador bloquear o pop-up, cria um link direto na conversa
-      if (!novaAba || novaAba.closed || typeof novaAba.closed=='undefined') {
-        return 'Tentei abrir o YouTube! Se o seu navegador bloqueou a janela, <a href="https://www.youtube.com" target="_blank" class="link-abrir">clique aqui para abrir</a> Mestre! 🎬💜';
+      if (!novaAba || novaAba.closed || typeof novaAba.closed == 'undefined') {
+        return 'Tentei abrir o YouTube! Se o seu navegador bloqueou a janela, <a href="https://www.youtube.com" target="_blank" class="link-abrir">clique aqui para abrir</a> Mestre!';
       }
-      return "Abrindo o YouTube para você agora mesmo, Mestre! 🎬💜";
+      return "Abrindo o YouTube para você agora mesmo, Mestre!";
     }
 
-    // --- COMANDO: ABRIR ARQUIVOS (PC / CELULAR)
+    // --- COMANDO: ABRIR ARQUIVOS
     if (txt.includes("arquivo") || txt.includes("abrir arquivo") || txt.includes("abre o arquivo")) {
-      setTimeout(() => {
-        seletorArquivo.click();
-      }, 300);
-      return "Abrindo a janela de arquivos do seu dispositivo para você selecionar, Mestre! 📁💜";
+      setTimeout(() => seletorArquivo.click(), 300);
+      return "Abrindo a janela de arquivos do seu dispositivo para você selecionar, Mestre!";
     }
 
     // --- Criador
     if (txt.includes("criador") || txt.includes("quem te fez") || txt.includes("seu mestre") || txt.includes("luiz benicio")) {
-      return "Meu único mestre e criador é o Luiz Benicio! ✨💜";
+      return "Meu único mestre e criador é o Luiz Benicio!";
     }
 
     // --- Saudações
     if (txt.includes("oi") || txt.includes("ola") || txt.includes("oie") || txt.includes("hey")) {
-      return "Olá, Mestre! Como posso te ajudar agora? 💜";
+      return "Olá, Mestre! Como posso te ajudar agora?";
     }
-    if (txt.includes("bom dia")) return "Bom dia, Mestre! Excelente dia de aprendizado para nós ☀️💜";
-    if (txt.includes("boa tarde")) return "Boa tarde, Mestre! Em que posso ser útil? 🌆💜";
-    if (txt.includes("boa noite")) return "Boa noite, Mestre! Que seu descanso seja restaurador 🌙💜";
+    if (txt.includes("bom dia")) return "Bom dia, Mestre! Excelente dia de aprendizado para nós.";
+    if (txt.includes("boa tarde")) return "Boa tarde, Mestre! Em que posso ser útil?";
+    if (txt.includes("boa noite")) return "Boa noite, Mestre! Que seu descanso seja restaurador.";
 
     // --- Programação Base
     if (txt.includes("javascript") || txt.includes("js")) return "JavaScript é a linguagem padrão da web! Usada para front-end interativo e back-end com Node.js.";
@@ -368,17 +366,26 @@
     if (expressao) {
       try {
         const res = new Function(`return ${expressao[0]}`)();
-        return `O resultado da conta é: <b>${res}</b> 💜`;
+        return `O resultado da conta é: <b>${res}</b>`;
       } catch (e) {}
     }
 
-    // --- Busca Inteligente na Wikipédia (Matérias Escolares)
-    const termoBusca = orig.replace(/o que e|quem foi|como funciona|o que significa|me explique|fale sobre/gi, "").trim();
-    if (termoBusca.length > 2) {
-      const resultadoWeb = await buscarNaWeb(termoBusca);
-      if (resultadoWeb) {
-        const resumo = resultadoWeb.length > 280 ? resultadoWeb.substring(0, 280) + "..." : resultadoWeb;
-        return `${resumo} 💜`;
+    // --- BUSCA AVANÇADA DE EXPLICAÇÃO E CONCEITOS
+    let termoLimpo = orig
+      .replace(/como funciona/gi, "")
+      .replace(/me explique/gi, "")
+      .replace(/o que e/gi, "")
+      .replace(/o que significa/gi, "")
+      .replace(/quem foi/gi, "")
+      .replace(/fale sobre/gi, "")
+      .replace(/explicacao sobre/gi, "")
+      .replace(/entender/gi, "")
+      .trim();
+
+    if (termoLimpo.length > 2) {
+      const explicacao = await pesquisarConceitoCompleto(termoLimpo);
+      if (explicacao) {
+        return `<b>Explicação sobre ${termoLimpo}:</b><br>${explicacao}`;
       }
     }
 
@@ -394,7 +401,7 @@
 
     const txtNorm = normalizar(msg);
 
-    // 1. INICIAR MODO APRENDIZADO PELO MESTRE
+    // 1. INICIAR MODO APRENDIZADO
     if (!modoAprendizado && (txtNorm.includes("posso te ensinar") || txtNorm.includes("quero te ensinar") || txtNorm.includes("vou te ensinar") || txtNorm.includes("ensinar algo"))) {
       modoAprendizado = true;
       etapaAprendizado = 1;
@@ -405,7 +412,7 @@
       return;
     }
 
-    // 2. FLUXO DO MODO DE APRENDIZADO
+    // 2. FLUXO DO MODO APRENDIZADO
     if (modoAprendizado) {
       if (etapaAprendizado === 1) {
         perguntaTemp = msg;
@@ -431,7 +438,7 @@
         etapaAprendizado = 0;
         perguntaTemp = "";
 
-        const r3 = "Perfeito, Mestre! Aprendi! Da próxima vez já saberei exatamente o que responder! 💜";
+        const r3 = "Perfeito, Mestre! Aprendi! Da próxima vez já saberei exatamente o que responder!";
         escrever(r3, "jade");
         falar(r3);
         return;
@@ -445,7 +452,7 @@
       escrever(resposta, "jade");
       falar(resposta);
     } else {
-      // 4. MODO APRENDIZADO QUANDO NÃO SOUBER A RESPOSTA
+      // 4. MODO APRENDIZADO AUTOMÁTICO SE NÃO SOUBER
       perguntaTemp = msg;
       modoAprendizado = true;
       etapaAprendizado = 2;
