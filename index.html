@@ -279,19 +279,31 @@
               .replace(/(.)\1+/g, '$1');
   }
 
-  // BUSCA AUTOMÁTICA NA WEB (WIKIPÉDIA)
+  // BUSCA WEB CORRIGIDA COM API DE BUSCA DA WIKIPÉDIA (SEM BLOQUEIO CORS)
   async function pesquisarNaWeb(termo) {
     try {
-      const url = `https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(termo)}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.extract && data.type !== "disambiguation") {
-          return data.extract;
+      // Etapa 1: Encontrar o título mais preciso
+      const urlBusca = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(termo)}&format=json&origin=*`;
+      const resBusca = await fetch(urlBusca);
+      const dataBusca = await resBusca.json();
+
+      if (dataBusca.query && dataBusca.query.search.length > 0) {
+        const tituloArtigo = dataBusca.query.search[0].title;
+        
+        // Etapa 2: Buscar o resumo do artigo encontrado
+        const urlResumo = `https://pt.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(tituloArtigo)}&format=json&origin=*`;
+        const resResumo = await fetch(urlResumo);
+        const dataResumo = await resResumo.json();
+        
+        const pages = dataResumo.query.pages;
+        const pageId = Object.keys(pages)[0];
+        
+        if (pageId !== "-1" && pages[pageId].extract) {
+          return pages[pageId].extract;
         }
       }
     } catch (e) {
-      console.log("Erro na busca online", e);
+      console.log("Erro na busca da Wikipedia:", e);
     }
     return null;
   }
@@ -341,7 +353,7 @@
     if (txt === "boa tarde") return "Boa tarde, Mestre! Em que posso ser útil?";
     if (txt === "boa noite") return "Boa noite, Mestre! Que seu descanso seja restaurador.";
 
-    // --- PESQUISA AUTOMÁTICA NA WEB PARA QUALQUER DÚVIDA
+    // --- PESQUISA AUTOMÁTICA NA WEB PARA QUALQUER DÚVIDA OU BIOGRAFIA
     let termoLimpo = orig
       .replace(/quem foi/gi, "")
       .replace(/quem e/gi, "")
@@ -352,7 +364,8 @@
       .replace(/fale sobre/gi, "")
       .trim();
 
-    const resultadoWeb = await pesquisarNaWeb(termoLimpo.length > 0 ? termoLimpo : orig);
+    const termoParaBuscar = termoLimpo.length > 0 ? termoLimpo : orig;
+    const resultadoWeb = await pesquisarNaWeb(termoParaBuscar);
     if (resultadoWeb) {
       return resultadoWeb;
     }
@@ -413,7 +426,7 @@
       }
     }
 
-    // 3. SE NÃO FOR MODO DE ENSINAR, ELA RESPONDE DA MEMÓRIA OU PESQUISA NA WEB
+    // 3. CONSULTA DA MEMÓRIA OU DA WEB
     const resposta = await pensar(msg);
     escrever(resposta, "jade");
     falar(resposta);
