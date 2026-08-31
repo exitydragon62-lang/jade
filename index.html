@@ -163,12 +163,6 @@
       color: #ff4d4d;
     }
 
-    a.link-abrir {
-      color: #b366ff;
-      font-weight: bold;
-      text-decoration: underline;
-    }
-
     @keyframes pulse {
       0% { opacity: 1; }
       50% { opacity: 0.5; }
@@ -186,7 +180,7 @@
 
     <div id="chat">
       <div class="msg msg-jade">
-        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para responder suas dúvidas sobre qualquer assunto ou biografia, abrir sites, arquivos e aprender com você.
+        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para responder suas dúvidas ou aprender com você!
       </div>
     </div>
 
@@ -195,8 +189,6 @@
       <button onclick="enviar()">Enviar</button>
       <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">Falar</button>
     </div>
-
-    <input type="file" id="seletorArquivo" style="display: none;" onchange="arquivoSelecionado(event)">
 
     <div class="footer-actions">
       <span class="shortcut-hint">Dica: Segure <b>C</b> para falar</span>
@@ -215,7 +207,6 @@
   const inputEl = document.getElementById("mensagem");
   const chatEl = document.getElementById("chat");
   const btnMic = document.getElementById("btnOuvir");
-  const seletorArquivo = document.getElementById("seletorArquivo");
 
   inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter") enviar();
@@ -247,11 +238,7 @@
 
   function falar(texto) {
     if (!('speechSynthesis' in window)) return;
-    
-    let textoLimpo = texto.replace(/<[^>]*>?/gm, '');
-    if (textoLimpo.length > 300) {
-      textoLimpo = textoLimpo.substring(0, 300) + "... O restante do texto está exibido no chat, Mestre!";
-    }
+    const textoLimpo = texto.replace(/<[^>]*>?/gm, '');
     
     speechSynthesis.cancel();
     const voz = new SpeechSynthesisUtterance(textoLimpo);
@@ -289,18 +276,7 @@
               .replace(/(.)\1+/g, '$1');
   }
 
-  function arquivoSelecionado(event) {
-    const file = event.target.files[0];
-    if (file) {
-      const urlArquivo = URL.createObjectURL(file);
-      window.open(urlArquivo, '_blank');
-      const rep = `Abrindo o arquivo "${file.name}" para você, Mestre!`;
-      escrever(rep, "jade");
-      falar(rep);
-    }
-  }
-
-  async function pesquisarConceitoCompleto(termo) {
+  async function buscarNaWeb(termo) {
     try {
       const url = `https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(termo)}`;
       const res = await fetch(url);
@@ -311,7 +287,7 @@
         }
       }
     } catch (e) {
-      console.log("Erro ao pesquisar conceito", e);
+      console.log("Erro na busca online", e);
     }
     return null;
   }
@@ -321,39 +297,38 @@
     const txt = normalizar(orig);
 
     // --- COMANDO: ABRIR YOUTUBE
-    if (txt.includes("youtube")) {
-      const novaAba = window.open("https://www.youtube.com", "_blank");
-      if (!novaAba || novaAba.closed || typeof novaAba.closed == 'undefined') {
-        return 'Tentei abrir o YouTube! Se o seu navegador bloqueou a janela, <a href="https://www.youtube.com" target="_blank" class="link-abrir">clique aqui para abrir</a> Mestre!';
-      }
+    if (txt.includes("youtube") || txt.includes("abrir youtube") || txt.includes("abre youtube")) {
+      window.open("https://www.youtube.com", "_blank");
       return "Abrindo o YouTube para você agora mesmo, Mestre!";
     }
 
-    // --- COMANDO: ABRIR ARQUIVOS
-    if (txt.includes("arquivo")) {
-      setTimeout(() => seletorArquivo.click(), 300);
-      return "Abrindo a janela de arquivos do seu dispositivo para você selecionar, Mestre!";
-    }
-
-    // --- CRIADOR
+    // --- Criador
     if (txt.includes("criador") || txt.includes("quem te fez") || txt.includes("seu mestre") || txt.includes("luiz benicio")) {
       return "Meu único mestre e criador é o Luiz Benicio!";
     }
 
-    // --- PROGRAMAÇÃO BASE
+    // --- Saudações
+    if (txt === "oi" || txt === "ola" || txt === "oie" || txt === "hey" || txt === "olá") {
+      return "Olá, Mestre! Como posso te ajudar agora?";
+    }
+    if (txt.includes("bom dia")) return "Bom dia, Mestre! Excelente dia de aprendizado para nós.";
+    if (txt.includes("boa tarde")) return "Boa tarde, Mestre! Em que posso ser útil?";
+    if (txt.includes("boa noite")) return "Boa noite, Mestre! Que seu descanso seja restaurador.";
+
+    // --- Programação Base
     if (txt.includes("javascript") || txt.includes("js")) return "JavaScript é a linguagem padrão da web! Usada para front-end interativo e back-end com Node.js.";
     if (txt.includes("lua")) return "Lua é uma linguagem brasileira super leve, usada no Roblox, games e sistemas embarcados!";
     if (txt.includes("html")) return "HTML é a linguagem de marcação estrutural da Web, feita através de tags.";
     if (txt.includes("css")) return "CSS é a linguagem de estilos usada para dar cor, layout e animações às páginas HTML.";
 
-    // --- MEMÓRIA APRENDIDA
+    // --- Memória Aprendida
     for (let item of memoria.conhecimentos) {
       if (orig === item.pergunta || txt === normalizar(item.pergunta)) {
         return item.resposta;
       }
     }
 
-    // --- RESOLUÇÃO MATEMÁTICA
+    // --- Resolução de Expressões Matemáticas
     const expressao = orig.match(/[0-9]+\s*[\+\-\*\/]\s*[0-9]+/);
     if (expressao) {
       try {
@@ -362,33 +337,15 @@
       } catch (e) {}
     }
 
-    // --- BUSCA NA WEB (PESQUISA BIOGRAFIAS E CONCEITOS ANTES DAS SAUDAÇÕES)
-    let termoLimpo = orig
-      .replace(/quem foi/gi, "")
-      .replace(/quem e/gi, "")
-      .replace(/como funciona/gi, "")
-      .replace(/me explique/gi, "")
-      .replace(/o que e/gi, "")
-      .replace(/o que significa/gi, "")
-      .replace(/fale sobre/gi, "")
-      .replace(/explicacao sobre/gi, "")
-      .replace(/entender/gi, "")
-      .trim();
-
-    if (termoLimpo.length > 2) {
-      const resultadoPesquisa = await pesquisarConceitoCompleto(termoLimpo);
-      if (resultadoPesquisa) {
-        return `<b>Informações sobre ${termoLimpo}:</b><br>${resultadoPesquisa}`;
+    // --- Busca Inteligente na Wikipédia (Matérias Escolares)
+    const termoBusca = orig.replace(/o que e|quem foi|como funciona|o que significa|me explique|fale sobre/gi, "").trim();
+    if (termoBusca.length > 2) {
+      const resultadoWeb = await buscarNaWeb(termoBusca);
+      if (resultadoWeb) {
+        const resumo = resultadoWeb.length > 280 ? resultadoWeb.substring(0, 280) + "..." : resultadoWeb;
+        return `${resumo}`;
       }
     }
-
-    // --- SAUDAÇÕES (APENAS SE NÃO FOR UMA PESQUISA)
-    if (txt === "oi" || txt === "ola" || txt === "oie" || txt === "hey" || txt === "olá") {
-      return "Olá, Mestre! Como posso te ajudar agora?";
-    }
-    if (txt.includes("bom dia")) return "Bom dia, Mestre! Excelente dia de aprendizado para nós.";
-    if (txt.includes("boa tarde")) return "Boa tarde, Mestre! Em que posso ser útil?";
-    if (txt.includes("boa noite")) return "Boa noite, Mestre! Que seu descanso seja restaurador.";
 
     return null;
   }
@@ -402,6 +359,7 @@
 
     const txtNorm = normalizar(msg);
 
+    // 1. INICIAR MODO APRENDIZADO PELO MESTRE
     if (!modoAprendizado && (txtNorm.includes("posso te ensinar") || txtNorm.includes("quero te ensinar") || txtNorm.includes("vou te ensinar") || txtNorm.includes("ensinar algo"))) {
       modoAprendizado = true;
       etapaAprendizado = 1;
@@ -412,6 +370,7 @@
       return;
     }
 
+    // 2. FLUXO DO MODO DE APRENDIZADO
     if (modoAprendizado) {
       if (etapaAprendizado === 1) {
         perguntaTemp = msg;
@@ -444,12 +403,14 @@
       }
     }
 
+    // 3. CONSULTA NORMAL / BUSCA DE RESPOSTAS E COMANDOS
     const resposta = await pensar(msg);
 
     if (resposta) {
       escrever(resposta, "jade");
       falar(resposta);
     } else {
+      // 4. MODO APRENDIZADO QUANDO NÃO SOUBER A RESPOSTA
       perguntaTemp = msg;
       modoAprendizado = true;
       etapaAprendizado = 2;
