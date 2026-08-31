@@ -186,7 +186,7 @@
 
     <div id="chat">
       <div class="msg msg-jade">
-        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para responder suas dúvidas sobre qualquer assunto, abrir sites, arquivos e aprender com você.
+        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para responder suas dúvidas sobre qualquer assunto ou biografia, abrir sites, arquivos e aprender com você.
       </div>
     </div>
 
@@ -300,6 +300,7 @@
     }
   }
 
+  // Pesquisa avançada online
   async function pesquisarConceitoCompleto(termo) {
     try {
       const url = `https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(termo)}`;
@@ -370,22 +371,24 @@
       } catch (e) {}
     }
 
-    // --- BUSCA AVANÇADA DE EXPLICAÇÃO E CONCEITOS
+    // --- BUSCA AVANÇADA AUTOMÁTICA
+    // Limpa gatilhos para extrair o assunto principal (ex: "quem foi nikola tesla" -> "nikola tesla")
     let termoLimpo = orig
+      .replace(/quem foi/gi, "")
+      .replace(/quem e/gi, "")
       .replace(/como funciona/gi, "")
       .replace(/me explique/gi, "")
       .replace(/o que e/gi, "")
       .replace(/o que significa/gi, "")
-      .replace(/quem foi/gi, "")
       .replace(/fale sobre/gi, "")
       .replace(/explicacao sobre/gi, "")
       .replace(/entender/gi, "")
       .trim();
 
-    if (termoLimpo.length > 2) {
-      const explicacao = await pesquisarConceitoCompleto(termoLimpo);
-      if (explicacao) {
-        return `<b>Explicação sobre ${termoLimpo}:</b><br>${explicacao}`;
+    if (termoLimpo.length > 1) {
+      const resultadoPesquisa = await pesquisarConceitoCompleto(termoLimpo);
+      if (resultadoPesquisa) {
+        return `<b>Informações sobre ${termoLimpo}:</b><br>${resultadoPesquisa}`;
       }
     }
 
@@ -445,14 +448,14 @@
       }
     }
 
-    // 3. CONSULTA NORMAL / BUSCA DE RESPOSTAS E COMANDOS
+    // 3. CONSULTA NORMAL E PESQUISA AUTOMÁTICA
     const resposta = await pensar(msg);
 
     if (resposta) {
       escrever(resposta, "jade");
       falar(resposta);
     } else {
-      // 4. MODO APRENDIZADO AUTOMÁTICO SE NÃO SOUBER
+      // 4. MODO APRENDIZADO AUTOMÁTICO SE NÃO ENCONTRAR NADA
       perguntaTemp = msg;
       modoAprendizado = true;
       etapaAprendizado = 2;
