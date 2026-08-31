@@ -180,7 +180,7 @@
 
     <div id="chat">
       <div class="msg msg-jade">
-        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para responder suas dúvidas ou aprender com você!
+        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para responder qualquer pergunta, pesquisar na web ou aprender coisas novas quando você quiser me ensinar.
       </div>
     </div>
 
@@ -238,7 +238,10 @@
 
   function falar(texto) {
     if (!('speechSynthesis' in window)) return;
-    const textoLimpo = texto.replace(/<[^>]*>?/gm, '');
+    let textoLimpo = texto.replace(/<[^>]*>?/gm, '');
+    if (textoLimpo.length > 300) {
+      textoLimpo = textoLimpo.substring(0, 300) + "... O restante está exibido no chat, Mestre!";
+    }
     
     speechSynthesis.cancel();
     const voz = new SpeechSynthesisUtterance(textoLimpo);
@@ -276,7 +279,8 @@
               .replace(/(.)\1+/g, '$1');
   }
 
-  async function buscarNaWeb(termo) {
+  // BUSCA AUTOMÁTICA NA WEB (WIKIPÉDIA)
+  async function pesquisarNaWeb(termo) {
     try {
       const url = `https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(termo)}`;
       const res = await fetch(url);
@@ -302,33 +306,25 @@
       return "Abrindo o YouTube para você agora mesmo, Mestre!";
     }
 
-    // --- Criador
+    // --- CRIADOR
     if (txt.includes("criador") || txt.includes("quem te fez") || txt.includes("seu mestre") || txt.includes("luiz benicio")) {
       return "Meu único mestre e criador é o Luiz Benicio!";
     }
 
-    // --- Saudações
-    if (txt === "oi" || txt === "ola" || txt === "oie" || txt === "hey" || txt === "olá") {
-      return "Olá, Mestre! Como posso te ajudar agora?";
-    }
-    if (txt.includes("bom dia")) return "Bom dia, Mestre! Excelente dia de aprendizado para nós.";
-    if (txt.includes("boa tarde")) return "Boa tarde, Mestre! Em que posso ser útil?";
-    if (txt.includes("boa noite")) return "Boa noite, Mestre! Que seu descanso seja restaurador.";
+    // --- PROGRAMAÇÃO BASE
+    if (txt === "javascript" || txt === "js") return "JavaScript é a linguagem padrão da web! Usada para front-end interativo e back-end com Node.js.";
+    if (txt === "lua") return "Lua é uma linguagem brasileira super leve, usada no Roblox, games e sistemas embarcados!";
+    if (txt === "html") return "HTML é a linguagem de marcação estrutural da Web, feita através de tags.";
+    if (txt === "css") return "CSS é a linguagem de estilos usada para dar cor, layout e animações às páginas HTML.";
 
-    // --- Programação Base
-    if (txt.includes("javascript") || txt.includes("js")) return "JavaScript é a linguagem padrão da web! Usada para front-end interativo e back-end com Node.js.";
-    if (txt.includes("lua")) return "Lua é uma linguagem brasileira super leve, usada no Roblox, games e sistemas embarcados!";
-    if (txt.includes("html")) return "HTML é a linguagem de marcação estrutural da Web, feita através de tags.";
-    if (txt.includes("css")) return "CSS é a linguagem de estilos usada para dar cor, layout e animações às páginas HTML.";
-
-    // --- Memória Aprendida
+    // --- MEMÓRIA DE ENSINAMENTOS DO MESTRE
     for (let item of memoria.conhecimentos) {
       if (orig === item.pergunta || txt === normalizar(item.pergunta)) {
         return item.resposta;
       }
     }
 
-    // --- Resolução de Expressões Matemáticas
+    // --- CÁLCULO MATEMÁTICO
     const expressao = orig.match(/[0-9]+\s*[\+\-\*\/]\s*[0-9]+/);
     if (expressao) {
       try {
@@ -337,17 +333,31 @@
       } catch (e) {}
     }
 
-    // --- Busca Inteligente na Wikipédia (Matérias Escolares)
-    const termoBusca = orig.replace(/o que e|quem foi|como funciona|o que significa|me explique|fale sobre/gi, "").trim();
-    if (termoBusca.length > 2) {
-      const resultadoWeb = await buscarNaWeb(termoBusca);
-      if (resultadoWeb) {
-        const resumo = resultadoWeb.length > 280 ? resultadoWeb.substring(0, 280) + "..." : resultadoWeb;
-        return `${resumo}`;
-      }
+    // --- SAUDAÇÕES DIRETAS
+    if (txt === "oi" || txt === "ola" || txt === "oie" || txt === "hey" || txt === "olá") {
+      return "Olá, Mestre! Como posso te ajudar agora?";
+    }
+    if (txt === "bom dia") return "Bom dia, Mestre! Excelente dia de aprendizado para nós.";
+    if (txt === "boa tarde") return "Boa tarde, Mestre! Em que posso ser útil?";
+    if (txt === "boa noite") return "Boa noite, Mestre! Que seu descanso seja restaurador.";
+
+    // --- PESQUISA AUTOMÁTICA NA WEB PARA QUALQUER DÚVIDA
+    let termoLimpo = orig
+      .replace(/quem foi/gi, "")
+      .replace(/quem e/gi, "")
+      .replace(/o que e/gi, "")
+      .replace(/como funciona/gi, "")
+      .replace(/o que significa/gi, "")
+      .replace(/me explique/gi, "")
+      .replace(/fale sobre/gi, "")
+      .trim();
+
+    const resultadoWeb = await pesquisarNaWeb(termoLimpo.length > 0 ? termoLimpo : orig);
+    if (resultadoWeb) {
+      return resultadoWeb;
     }
 
-    return null;
+    return "Desculpe, Mestre! Não encontrei informações sobre isso na web nem na minha memória. Se quiser me ensinar, é só dizer 'quero te ensinar'!";
   }
 
   async function enviar() {
@@ -359,8 +369,8 @@
 
     const txtNorm = normalizar(msg);
 
-    // 1. INICIAR MODO APRENDIZADO PELO MESTRE
-    if (!modoAprendizado && (txtNorm.includes("posso te ensinar") || txtNorm.includes("quero te ensinar") || txtNorm.includes("vou te ensinar") || txtNorm.includes("ensinar algo"))) {
+    // 1. APENAS ENTRA NO MODO APRENDIZADO SE O MESTRE PEDIR EXPLICITAMENTE
+    if (!modoAprendizado && (txtNorm.includes("ensinar") || txtNorm.includes("posso te ensinar") || txtNorm.includes("quero te ensinar") || txtNorm.includes("vou te ensinar"))) {
       modoAprendizado = true;
       etapaAprendizado = 1;
 
@@ -370,7 +380,7 @@
       return;
     }
 
-    // 2. FLUXO DO MODO DE APRENDIZADO
+    // 2. PASSO A PASSO DO APRENDIZADO
     if (modoAprendizado) {
       if (etapaAprendizado === 1) {
         perguntaTemp = msg;
@@ -403,22 +413,10 @@
       }
     }
 
-    // 3. CONSULTA NORMAL / BUSCA DE RESPOSTAS E COMANDOS
+    // 3. SE NÃO FOR MODO DE ENSINAR, ELA RESPONDE DA MEMÓRIA OU PESQUISA NA WEB
     const resposta = await pensar(msg);
-
-    if (resposta) {
-      escrever(resposta, "jade");
-      falar(resposta);
-    } else {
-      // 4. MODO APRENDIZADO QUANDO NÃO SOUBER A RESPOSTA
-      perguntaTemp = msg;
-      modoAprendizado = true;
-      etapaAprendizado = 2;
-
-      const repPedindoAjuda = "Ainda não sei sobre isso, Mestre! Posso te ensinar? O que eu deveria responder quando você me diz isso?";
-      escrever(repPedindoAjuda, "jade");
-      falar(repPedindoAjuda);
-    }
+    escrever(resposta, "jade");
+    falar(resposta);
   }
 
   function iniciarGravacao(e) {
