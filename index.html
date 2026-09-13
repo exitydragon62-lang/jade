@@ -176,10 +176,6 @@
       color: #ff4d4d;
     }
 
-    audio {
-      display: none;
-    }
-
     @keyframes pulse {
       0% { opacity: 1; }
       50% { opacity: 0.5; }
@@ -199,7 +195,7 @@
       <div class="msg msg-jade">
         <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>
         • Pressione <b>V</b> para dados do ambiente.<br>
-        • Pressione <b>M</b> para tocar uma música da web.<br>
+        • Pressione <b>M</b> para ouvir uma música.<br>
         • Pressione <b>N</b> para parar a música.<br>
         • Segure <b>C</b> para falar ou digite seus comandos normalmente.
       </div>
@@ -217,7 +213,8 @@
     </div>
   </div>
 
-  <audio id="playerMusica"></audio>
+  <div id="youtube-player" style="display: none;"></div>
+  <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
   let memoria = JSON.parse(localStorage.getItem("jade_memoria")) || { conhecimentos: [], tarefas: [] };
@@ -226,11 +223,20 @@
   let perguntaTemp = "";
   let gravacaoAtiva = false;
   let rec = null;
+  let ytPlayer = null;
+  let janelaMusica = null;
 
   const inputEl = document.getElementById("mensagem");
   const chatEl = document.getElementById("chat");
   const btnMic = document.getElementById("btnOuvir");
-  const player = document.getElementById("playerMusica");
+
+  function onYouTubeIframeAPIReady() {
+    ytPlayer = new YT.Player('youtube-player', {
+      height: '0',
+      width: '0',
+      playerVars: { 'autoplay': 1, 'controls': 0 }
+    });
+  }
 
   inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter") enviar();
@@ -318,50 +324,28 @@
               .replace(/(.)\1+/g, '$1');
   }
 
-  async function iniciarModoMusica() {
+  function iniciarModoMusica() {
     const nomeMusica = prompt("Mestre, qual música deseja ouvir?");
     if (!nomeMusica) return;
 
-    escrever(`[Atalho M] Buscando a música <b>"${nomeMusica}"</b> na web...`, "user");
+    escrever(`[Atalho M] Buscando a música <b>"${nomeMusica}"</b>...`, "user");
     falar(`Buscando a música ${nomeMusica} para você, Mestre!`);
 
-    try {
-      const res = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(nomeMusica)}&filter=music`);
-      const data = await res.json();
+    const urlBusca = `https://www.youtube.com/results?search_query=${encodeURIComponent(nomeMusica)}`;
+    janelaMusica = window.open(urlBusca, "_blank");
 
-      if (data.items && data.items.length > 0) {
-        const item = data.items[0];
-        const videoId = item.url.split("v=")[1];
-
-        const streamRes = await fetch(`https://pipedapi.kavin.rocks/streams/${videoId}`);
-        const streamData = await streamRes.json();
-
-        const audioStream = streamData.audioStreams.find(s => s.mimeType.includes("audio/mp4") || s.mimeType.includes("audio/webm"));
-
-        if (audioStream && audioStream.url) {
-          player.src = audioStream.url;
-          player.play();
-          escrever(`Tocando agora: <b>${item.title}</b><br><i>Pressione <b>N</b> a qualquer momento para parar.</i>`, "jade");
-          falar(`Tocando ${item.title} agora, Mestre!`);
-        } else {
-          escrever("Não consegui extrair o áudio dessa música no momento, Mestre.", "jade");
-        }
-      } else {
-        escrever("Não encontrei nenhuma música com esse nome na web, Mestre.", "jade");
-      }
-    } catch (e) {
-      escrever("Ocorreu um erro ao carregar a música da web, Mestre.", "jade");
-    }
+    escrever(`Tocando a música <b>"${nomeMusica}"</b> na web, Mestre! Pressione <b>N</b> para fechar a música.`, "jade");
+    falar(`Tocando a música ${nomeMusica} para você, Mestre!`);
   }
 
   function pararMusica() {
-    if (!player.paused) {
-      player.pause();
-      player.currentTime = 0;
-      escrever("[Atalho N] Música interrompida.", "jade");
+    if (janelaMusica && !janelaMusica.closed) {
+      janelaMusica.close();
+      janelaMusica = null;
+      escrever("[Atalho N] Reprodução de música interrompida.", "jade");
       falar("Música parada, Mestre!");
     } else {
-      escrever("Nenhuma música está tocando no momento, Mestre.", "jade");
+      escrever("Nenhuma janela de música aberta no momento, Mestre.", "jade");
     }
   }
 
@@ -439,11 +423,11 @@
     let relatorioHTML = `
 Aqui estão suas informações atualizadas, Mestre:
 <br><br>
-🕒 <b>Horário:</b> ${hora}<br>
-📅 <b>Data:</b> ${data}<br>
-🔋 <b>Bateria do Dispositivo:</b> ${bateria}<br>
+<b>Horário:</b> ${hora}<br>
+<b>Data:</b> ${data}<br>
+<b>Bateria do Dispositivo:</b> ${bateria}<br>
 <br>
-🌤️ <b>Dados Meteorológicos:</b>
+<b>Dados Meteorológicos:</b>
 ${clima}`;
 
     escrever(relatorioHTML, "jade");
@@ -596,7 +580,7 @@ saudar("Mestre")</pre>`;
       if (isNaN(segundos) || segundos <= 0) return "Por favor, especifique o tempo em segundos. Exemplo: 'timer 10'";
       
       setTimeout(() => {
-        escrever(`⏰ <b>Timer finalizado!</b> O tempo de ${segundos} segundo(s) terminou, Mestre!`, "jade");
+        escrever(`<b>Timer finalizado!</b> O tempo de ${segundos} segundo(s) terminou, Mestre!`, "jade");
         falar(`Timer de ${segundos} segundos finalizado, Mestre!`);
       }, segundos * 1000);
 
@@ -641,16 +625,17 @@ saudar("Mestre")</pre>`;
     const respostaCodigo = processarProgramacao(orig, txt);
     if (respostaCodigo) return respostaCodigo;
 
+    if (/(quem e voce|quem e vc|qual seu nome|o que voce e|oque voce e|oque vc e|o que vc e)/i.test(orig)) {
+      return "Eu sou uma IA feita para ajudar meu mestre Luiz Benício! Sou sua assistente pessoal para pesquisas, automações, tarefas do dia a dia, músicas e códigos.";
+    }
+
+    if (/(criador|quem te fez|seu mestre|luiz benicio)/i.test(orig)) {
+      return "Meu único mestre e criador é o Luiz Benício!";
+    }
+
     if (/(youtube|abrir youtube|abre o youtube)/i.test(orig) && !txt.includes("pesquisar") && !txt.includes("buscar")) {
       window.open("https://www.youtube.com", "_blank");
       return "Abrindo o YouTube para você agora mesmo, Mestre!";
-    }
-
-    if (/(quem e voce|quem e vc|qual seu nome)/i.test(orig)) {
-      return "Eu sou a Jade, sua assistente pessoal inteligente, Mestre!";
-    }
-    if (/(criador|quem te fez|seu mestre|luiz benicio)/i.test(orig)) {
-      return "Meu único mestre e criador é o Luiz Benicio!";
     }
 
     if (/^(tudo bem|como voce esta|tudo certo|como vai)/i.test(orig)) {
