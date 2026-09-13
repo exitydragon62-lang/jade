@@ -99,6 +99,7 @@
       font-size: 12px;
       color: #00ffcc;
       white-space: pre-wrap;
+      margin-top: 8px;
     }
 
     .input-box {
@@ -252,201 +253,6 @@
     if (!('speechSynthesis' in window)) return;
     let textoLimpo = texto.replace(/<[^>]*>?/gm, '');
     if (textoLimpo.length > 200) {
-      textoLimpo = textoLimpo.substring(0, 200) + "... O código e detalhes estão no chat, Mestre!";
-    }
-    
-    speechSynthesis.cancel();
-    const voz = new SpeechSynthesisUtterance(textoLimpo);
-    voz.lang = "pt-BR";
-    voz.pitch = 1.2;
-    voz.rate = 1.0;
-
-    const voces = speechSynthesis.getVoices();
-    const vozFeminina = voces.find(v => v.lang.includes("pt") && (v.name.includes("Luciana") || v.name.includes("Yelda") || v.name.includes("Google português do Brasil") || v.name.includes("Maria") || v.name.includes("Helena")));
-    
-    if (vozFeminina) voz.voice = vozFeminina;
-
-    speechSynthesis.speak(voz);
-  }
-
-  function escrever(texto, remetente) {
-    const div = document.createElement("div");
-    div.classList.add("msg");
-    
-    if (remetente === "user") {
-      div.classList.add("msg-user");
-      div.innerHTML = `<b>Mestre:</b> ${texto}`;
-    } else {
-      div.classList.add("msg-jade");
-      div.innerHTML = `<b>Jade:</b> ${texto}`;
-    }
-
-    chatEl.appendChild(div);
-    chatEl.scrollTop = chatEl.scrollHeight;
-  }
-
-  function normalizar(txt) {
-    return txt.toLowerCase()
-              .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-              .replace(/(.)\1+/g, '$1');
-  }
-
-  async function pesquisarNaWeb(termo) {
-    try {
-      const urlBusca = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(termo)}&format=json&origin=*`;
-      const resBusca = await fetch(urlBusca);
-      const dataBusca = await resBusca.json();
-
-      if (dataBusca.query && dataBusca.query.search.length > 0) {
-        const tituloArtigo = dataBusca.query.search[0].title;
-        const urlResumo = `https://pt.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(tituloArtigo)}&format=json&origin=*`;
-        const resResumo = await fetch(urlResumo);
-        const dataResumo = await resResumo.json();
-        
-        const pages = dataResumo.query.pages;
-        const pageId = Object.keys(pages)[0];
-        
-        if (pageId !== "-1" && pages[pageId].extract) {
-          return pages[pageId].extract;
-        }
-      }
-    } catch (e) {
-      console.log("Erro na busca:", e);
-    }
-    return null;
-  }
-
-  // GERADOR E INTERPRETADOR DE CÓDIGO / PROGRAMAÇÃO DE IAS
-  function processarProgramacao(orig, txt) {
-    // 1. Pedido para criar outra IA
-    if (txt.includes("criar ia") || txt.includes("fazer ia") || txt.includes("codigo ia") || txt.includes("criar outra ia")) {
-      return `Com certeza, Mestre! Aqui está uma estrutura base em JavaScript para criar um chatbot de IA simples em HTML/JS:
-<pre>class MiniIA {
-  constructor(nome) {
-    this.nome = nome;
-    this.memoria = {};
-  }
-  responder(pergunta) {
-    const p = pergunta.toLowerCase();
-    if (this.memoria[p]) return this.memoria[p];
-    if (p.includes("ola")) return "Olá! Como posso ajudar?";
-    return "Não sei responder isso ainda.";
-  }
-  aprender(pergunta, resposta) {
-    this.memoria[pergunta.toLowerCase()] = resposta;
-  }
-}
-
-const minhaIA = new MiniIA("NovaIA");
-console.log(minhaIA.responder("ola"));</pre>`;
-    }
-
-    // 2. Pedidos de Código em Linguagens Específicas
-    if (txt.includes("codigo javascript") || txt.includes("criar js") || txt.includes("script js")) {
-      return `Aqui está um exemplo funcional de JavaScript para manipular o DOM e responder a um evento:
-<pre>document.addEventListener("DOMContentLoaded", () => {
-  const botao = document.createElement("button");
-  botao.innerText = "Clique aqui";
-  botao.addEventListener("click", () => alert("Ação executada com sucesso!"));
-  document.body.appendChild(botao);
-});</pre>`;
-    }
-
-    if (txt.includes("codigo lua") || txt.includes("script lua") || txt.includes("criar lua")) {
-      return `Aqui está um exemplo de script em Lua com estrutura de controle e função:
-<pre>local function saudarUsuario(nome)
-    print("Olá, " .. nome .. "! Bem-vindo ao sistema em Lua.")
-end
-
-local jogadores = {"Luiz", "Jade", "Admin"}
-for index, jogador in ipairs(jogadores) do
-    saudarUsuario(jogador)
-end</pre>`;
-    }
-
-    if (txt.includes("codigo html") || txt.includes("estrutura html") || txt.includes("criar html")) {
-      return `Aqui está uma estrutura básica de página HTML5:
-<pre>&lt;!DOCTYPE html&gt;
-&lt;html lang="pt-BR"&gt;
-&lt;head&gt;
-  &lt;meta charset="UTF-8"&gt;
-  &lt;title&gt;Minha Aplicação&lt;/title&gt;
-&lt;/head&gt;
-&lt;body&gt;
-  &lt;h1&gt;Bem-vindo!&lt;/h1&gt;
-  &lt;p&gt;Página desenvolvida com auxílio da Jade IA.&lt;/p&gt;
-&lt;/body&gt;
-&lt;/html&gt;</pre>`;
-    }
-
-    if (txt.includes("codigo css") || txt.includes("estilo css") || txt.includes("criar css")) {
-      return `Aqui está um modelo de estilo CSS moderno com suporte a Flexbox:
-<pre>body {
-  background-color: #121212;
-  color: #ffffff;
-  font-family: Arial, sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  margin: 0;
-}
-
-.card {
-  background: #1e1e1e;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid #333;
-}</pre>`;
-    }
-
-    // 3. Execução de código JS direto no navegador
-    if (orig.startsWith("executar:") || orig.startsWith("run:")) {
-      const jsCodigo = orig.replace(/^(executar:|run:)/i, "").trim();
-<script>
-  let memoria = JSON.parse(localStorage.getItem("jade_memoria")) || { conhecimentos: [] };
-  let modoAprendizado = false;
-  let etapaAprendizado = 0;
-  let perguntaTemp = "";
-  let gravacaoAtiva = false;
-  let rec = null;
-
-  const inputEl = document.getElementById("mensagem");
-  const chatEl = document.getElementById("chat");
-  const btnMic = document.getElementById("btnOuvir");
-
-  inputEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") enviar();
-  });
-
-  window.addEventListener("keydown", (e) => {
-    if ((e.key === "c" || e.key === "C") && document.activeElement !== inputEl && !gravacaoAtiva) {
-      iniciarGravacao();
-    }
-  });
-
-  window.addEventListener("keyup", (e) => {
-    if ((e.key === "c" || e.key === "C") && gravacaoAtiva) {
-      pararGravacao();
-    }
-  });
-
-  function salvarMemoria() {
-    localStorage.setItem("jade_memoria", JSON.stringify(memoria));
-  }
-
-  function limparMemoria() {
-    if (confirm("Mestre, deseja apagar todo o aprendizado personalizado?")) {
-      memoria.conhecimentos = [];
-      salvarMemoria();
-      escrever("Minha memória de novos ensinamentos foi resetada, Mestre!", "jade");
-    }
-  }
-
-  function falar(texto) {
-    if (!('speechSynthesis' in window)) return;
-    let textoLimpo = texto.replace(/<[^>]*>?/gm, '');
-    if (textoLimpo.length > 200) {
       textoLimpo = textoLimpo.substring(0, 200) + "... O restante está exibido no chat, Mestre!";
     }
     
@@ -486,17 +292,10 @@ end</pre>`;
               .replace(/(.)\1+/g, '$1');
   }
 
-  // LIMPEZA DE TERMO PARA MELHORAR A BUSCA DA WIKIPÉDIA
   function extrairTermoBusca(frase) {
     let termo = frase.toLowerCase();
-
-    // Remove saudações e chamadas à IA
     termo = termo.replace(/\b(opa|ola|oi|hey|ei|jade|por favor|pfv)\b/gi, '');
-
-    // Remove intenções de pesquisa e perguntas
-    termo = termo.replace(/\b(pesquise|pesquisa|procure|procura|busca|busque|me diga|fale sobre|quem foi|quem e|o que e|oque e|oque e|o q e|que e|qual e|como funciona|o que significa)\b/gi, '');
-
-    // Remove artigos e pontuação residual
+    termo = termo.replace(/\b(pesquise|pesquisa|procure|procura|busca|busque|me diga|fale sobre|quem foi|quem e|o que e|oque e|o q e|que e|qual e|como funciona|o que significa)\b/gi, '');
     termo = termo.replace(/[?!=.,;]/g, '').trim();
 
     return termo.length > 0 ? termo : frase;
@@ -606,17 +405,14 @@ saudar("Mestre")</pre>`;
     const orig = msg.trim();
     const txt = normalizar(orig);
 
-    // 1. PROCESSAMENTO DE PROGRAMAÇÃO
     const respostaCodigo = processarProgramacao(orig, txt);
     if (respostaCodigo) return respostaCodigo;
 
-    // 2. ABRIR YOUTUBE
     if (/(youtube|abrir youtube|abre o youtube)/i.test(orig)) {
       window.open("https://www.youtube.com", "_blank");
       return "Abrindo o YouTube para você agora mesmo, Mestre!";
     }
 
-    // 3. IDENTIDADE E CRIADOR
     if (/(quem e voce|quem e vc|qual seu nome)/i.test(orig)) {
       return "Eu sou a Jade, sua assistente pessoal inteligente, Mestre!";
     }
@@ -624,7 +420,6 @@ saudar("Mestre")</pre>`;
       return "Meu único mestre e criador é o Luiz Benicio!";
     }
 
-    // 4. CONVERSAÇÃO / INTERPRETAÇÃO DE CORTESIA DO MESTRE
     if (/^(tudo bem|como voce esta|tudo certo|como vai)/i.test(orig)) {
       return "Estou ótima e totalmente operacional, Mestre! Como posso te ajudar hoje?";
     }
@@ -632,14 +427,12 @@ saudar("Mestre")</pre>`;
       return "Disponha sempre, Mestre! Estou aqui para o que precisar.";
     }
 
-    // 5. MEMÓRIA DE ENSINAMENTOS
     for (let item of memoria.conhecimentos) {
       if (orig.toLowerCase() === item.pergunta || txt === normalizar(item.pergunta)) {
         return item.resposta;
       }
     }
 
-    // 6. CÁLCULO MATEMÁTICO
     const expressao = orig.match(/[\d\.\(\)]+\s*[\+\-\*\/\^\%]\s*[\d\.\(\)]+/);
     if (expressao) {
       try {
@@ -649,7 +442,6 @@ saudar("Mestre")</pre>`;
       } catch (e) {}
     }
 
-    // 7. SAUDAÇÕES SIMPLES OU COMPOSTAS
     if (/^(opa|oi|ola|olá|oie|hey)\b/i.test(orig) && orig.split(' ').length <= 4 && !/pesquise|busca|oque|o que/i.test(orig)) {
       return "Olá, Mestre! Como posso ajudar você agora?";
     }
@@ -657,7 +449,6 @@ saudar("Mestre")</pre>`;
     if (/^boa tarde/i.test(orig)) return "Boa tarde, Mestre! Em que posso ajudar?";
     if (/^boa noite/i.test(orig)) return "Boa noite, Mestre! Que seu descanso seja restaurador.";
 
-    // 8. BUSCA AUTOMÁTICA NA WEB (Pesquisa Inteligente)
     const resultadoWeb = await pesquisarNaWeb(orig);
     if (resultadoWeb) {
       return resultadoWeb;
