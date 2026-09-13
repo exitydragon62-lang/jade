@@ -176,6 +176,20 @@
       color: #ff4d4d;
     }
 
+    .music-container {
+      margin-top: 10px;
+      width: 100%;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    iframe {
+      width: 100%;
+      height: 180px;
+      border: none;
+      border-radius: 10px;
+    }
+
     @keyframes pulse {
       0% { opacity: 1; }
       50% { opacity: 0.5; }
@@ -213,9 +227,6 @@
     </div>
   </div>
 
-  <div id="youtube-player" style="display: none;"></div>
-  <script src="https://www.youtube.com/iframe_api"></script>
-
 <script>
   let memoria = JSON.parse(localStorage.getItem("jade_memoria")) || { conhecimentos: [], tarefas: [] };
   let modoAprendizado = false;
@@ -223,20 +234,11 @@
   let perguntaTemp = "";
   let gravacaoAtiva = false;
   let rec = null;
-  let ytPlayer = null;
-  let janelaMusica = null;
+  let playerAtualId = null;
 
   const inputEl = document.getElementById("mensagem");
   const chatEl = document.getElementById("chat");
   const btnMic = document.getElementById("btnOuvir");
-
-  function onYouTubeIframeAPIReady() {
-    ytPlayer = new YT.Player('youtube-player', {
-      height: '0',
-      width: '0',
-      playerVars: { 'autoplay': 1, 'controls': 0 }
-    });
-  }
 
   inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter") enviar();
@@ -316,6 +318,7 @@
 
     chatEl.appendChild(div);
     chatEl.scrollTop = chatEl.scrollHeight;
+    return div;
   }
 
   function normalizar(txt) {
@@ -328,25 +331,34 @@
     const nomeMusica = prompt("Mestre, qual música deseja ouvir?");
     if (!nomeMusica) return;
 
-    escrever(`[Atalho M] Buscando a música <b>"${nomeMusica}"</b>...`, "user");
-    falar(`Buscando a música ${nomeMusica} para você, Mestre!`);
+    escrever(`[Atalho M] Colocando a música <b>"${nomeMusica}"</b> para tocar...`, "user");
+    
+    const idContainer = "player-" + Date.now();
+    playerAtualId = idContainer;
 
-    const urlBusca = `https://www.youtube.com/results?search_query=${encodeURIComponent(nomeMusica)}`;
-    janelaMusica = window.open(urlBusca, "_blank");
+    const embedUrl = `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(nomeMusica)}&autoplay=1`;
 
-    escrever(`Tocando a música <b>"${nomeMusica}"</b> na web, Mestre! Pressione <b>N</b> para fechar a música.`, "jade");
+    const htmlResposta = `Tocando <b>"${nomeMusica}"</b> para você, Mestre!<br><small>Pressione <b>N</b> a qualquer momento para parar a música.</small>
+    <div id="${idContainer}" class="music-container">
+      <iframe src="${embedUrl}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>`;
+
+    escrever(htmlResposta, "jade");
     falar(`Tocando a música ${nomeMusica} para você, Mestre!`);
   }
 
   function pararMusica() {
-    if (janelaMusica && !janelaMusica.closed) {
-      janelaMusica.close();
-      janelaMusica = null;
-      escrever("[Atalho N] Reprodução de música interrompida.", "jade");
-      falar("Música parada, Mestre!");
-    } else {
-      escrever("Nenhuma janela de música aberta no momento, Mestre.", "jade");
+    if (playerAtualId) {
+      const el = document.getElementById(playerAtualId);
+      if (el) {
+        el.remove();
+        playerAtualId = null;
+        escrever("[Atalho N] Música encerrada com sucesso, Mestre.", "jade");
+        falar("Música parada, Mestre!");
+        return;
+      }
     }
+    escrever("Nenhuma música tocando no momento, Mestre.", "jade");
   }
 
   function traduzirCodigoClima(code) {
