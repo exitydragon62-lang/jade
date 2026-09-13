@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jade IA</title>
+  <title>Jade IA - Avançada</title>
   <style>
     * {
       box-sizing: border-box;
@@ -23,7 +23,7 @@
 
     .app {
       width: 100%;
-      max-width: 450px;
+      max-width: 500px;
       background: #181124;
       padding: 20px;
       border-radius: 20px;
@@ -54,7 +54,7 @@
 
     #chat {
       background: #09050e;
-      height: 380px;
+      height: 420px;
       overflow-y: auto;
       padding: 15px;
       border-radius: 14px;
@@ -66,7 +66,7 @@
     }
 
     .msg {
-      max-width: 85%;
+      max-width: 90%;
       padding: 10px 14px;
       border-radius: 15px;
       font-size: 14px;
@@ -87,6 +87,18 @@
       background: #7928ca;
       color: #ffffff;
       border-bottom-right-radius: 2px;
+    }
+
+    pre {
+      background: #0d0814;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #4c287a;
+      overflow-x: auto;
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+      color: #00ffcc;
+      white-space: pre-wrap;
     }
 
     .input-box {
@@ -180,12 +192,12 @@
 
     <div id="chat">
       <div class="msg msg-jade">
-        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para responder qualquer pergunta, pesquisar na web ou aprender coisas novas quando você quiser me ensinar.
+        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para responder perguntas, pesquisar na web, executar cálculos, criar códigos (JS, Lua, HTML, CSS), programar novas IAs ou aprender novos conhecimentos.
       </div>
     </div>
 
     <div class="input-box">
-      <input id="mensagem" placeholder="Digite ou segure 'C' para falar..." autocomplete="off">
+      <input id="mensagem" placeholder="Digite, peça um código ou segure 'C'..." autocomplete="off">
       <button onclick="enviar()">Enviar</button>
       <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">Falar</button>
     </div>
@@ -239,8 +251,8 @@
   function falar(texto) {
     if (!('speechSynthesis' in window)) return;
     let textoLimpo = texto.replace(/<[^>]*>?/gm, '');
-    if (textoLimpo.length > 300) {
-      textoLimpo = textoLimpo.substring(0, 300) + "... O restante está exibido no chat, Mestre!";
+    if (textoLimpo.length > 200) {
+      textoLimpo = textoLimpo.substring(0, 200) + "... O código e detalhes estão no chat, Mestre!";
     }
     
     speechSynthesis.cancel();
@@ -279,18 +291,14 @@
               .replace(/(.)\1+/g, '$1');
   }
 
-  // BUSCA WEB CORRIGIDA COM API DE BUSCA DA WIKIPÉDIA (SEM BLOQUEIO CORS)
   async function pesquisarNaWeb(termo) {
     try {
-      // Etapa 1: Encontrar o título mais preciso
       const urlBusca = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(termo)}&format=json&origin=*`;
       const resBusca = await fetch(urlBusca);
       const dataBusca = await resBusca.json();
 
       if (dataBusca.query && dataBusca.query.search.length > 0) {
         const tituloArtigo = dataBusca.query.search[0].title;
-        
-        // Etapa 2: Buscar o resumo do artigo encontrado
         const urlResumo = `https://pt.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(tituloArtigo)}&format=json&origin=*`;
         const resResumo = await fetch(urlResumo);
         const dataResumo = await resResumo.json();
@@ -303,65 +311,154 @@
         }
       }
     } catch (e) {
-      console.log("Erro na busca da Wikipedia:", e);
+      console.log("Erro na busca:", e);
     }
     return null;
   }
 
+  // GERADOR E INTERPRETADOR DE CÓDIGO / PROGRAMAÇÃO DE IAS
+  function processarProgramacao(orig, txt) {
+    // 1. Pedido para criar outra IA
+    if (txt.includes("criar ia") || txt.includes("fazer ia") || txt.includes("codigo ia") || txt.includes("criar outra ia")) {
+      return `Com certeza, Mestre! Aqui está uma estrutura base em JavaScript para criar um chatbot de IA simples em HTML/JS:
+<pre>class MiniIA {
+  constructor(nome) {
+    this.nome = nome;
+    this.memoria = {};
+  }
+  responder(pergunta) {
+    const p = pergunta.toLowerCase();
+    if (this.memoria[p]) return this.memoria[p];
+    if (p.includes("ola")) return "Olá! Como posso ajudar?";
+    return "Não sei responder isso ainda.";
+  }
+  aprender(pergunta, resposta) {
+    this.memoria[pergunta.toLowerCase()] = resposta;
+  }
+}
+
+const minhaIA = new MiniIA("NovaIA");
+console.log(minhaIA.responder("ola"));</pre>`;
+    }
+
+    // 2. Pedidos de Código em Linguagens Específicas
+    if (txt.includes("codigo javascript") || txt.includes("criar js") || txt.includes("script js")) {
+      return `Aqui está um exemplo funcional de JavaScript para manipular o DOM e responder a um evento:
+<pre>document.addEventListener("DOMContentLoaded", () => {
+  const botao = document.createElement("button");
+  botao.innerText = "Clique aqui";
+  botao.addEventListener("click", () => alert("Ação executada com sucesso!"));
+  document.body.appendChild(botao);
+});</pre>`;
+    }
+
+    if (txt.includes("codigo lua") || txt.includes("script lua") || txt.includes("criar lua")) {
+      return `Aqui está um exemplo de script em Lua com estrutura de controle e função:
+<pre>local function saudarUsuario(nome)
+    print("Olá, " .. nome .. "! Bem-vindo ao sistema em Lua.")
+end
+
+local jogadores = {"Luiz", "Jade", "Admin"}
+for index, jogador in ipairs(jogadores) do
+    saudarUsuario(jogador)
+end</pre>`;
+    }
+
+    if (txt.includes("codigo html") || txt.includes("estrutura html") || txt.includes("criar html")) {
+      return `Aqui está uma estrutura básica de página HTML5:
+<pre>&lt;!DOCTYPE html&gt;
+&lt;html lang="pt-BR"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;title&gt;Minha Aplicação&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;Bem-vindo!&lt;/h1&gt;
+  &lt;p&gt;Página desenvolvida com auxílio da Jade IA.&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>`;
+    }
+
+    if (txt.includes("codigo css") || txt.includes("estilo css") || txt.includes("criar css")) {
+      return `Aqui está um modelo de estilo CSS moderno com suporte a Flexbox:
+<pre>body {
+  background-color: #121212;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.card {
+  background: #1e1e1e;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #333;
+}</pre>`;
+    }
+
+    // 3. Execução de código JS direto no navegador
+    if (orig.startsWith("executar:") || orig.startsWith("run:")) {
+      const jsCodigo = orig.replace(/^(executar:|run:)/i, "").trim();
+      try {
+        const resultado = new Function(jsCodigo)();
+        return `Código executado com sucesso!<br><b>Retorno:</b> <pre>${resultado !== undefined ? resultado : "Executado sem retorno numérico/texto"}</pre>`;
+      } catch (err) {
+        return `Erro ao executar o código JavaScript:<br><pre>${err.message}</pre>`;
+      }
+    }
+
+    return null;
+  }
+
   async function pensar(msg) {
-    const orig = msg.toLowerCase().trim();
+    const orig = msg.trim();
     const txt = normalizar(orig);
 
-    // --- COMANDO: ABRIR YOUTUBE
-    if (txt.includes("youtube") || txt.includes("abrir youtube") || txt.includes("abre youtube")) {
+    // INTEGRAÇÃO DE PROGRAMAÇÃO E IAS
+    const respostaCodigo = processarProgramacao(orig, txt);
+    if (respostaCodigo) return respostaCodigo;
+
+    // COMANDO: YOUTUBE
+    if (/(abrir|abre|acessar)\s+youtube|youtube/i.test(orig)) {
       window.open("https://www.youtube.com", "_blank");
       return "Abrindo o YouTube para você agora mesmo, Mestre!";
     }
 
-    // --- CRIADOR
-    if (txt.includes("criador") || txt.includes("quem te fez") || txt.includes("seu mestre") || txt.includes("luiz benicio")) {
+    // CRIADOR
+    if (/(criador|quem te fez|seu mestre|luiz benicio)/i.test(orig)) {
       return "Meu único mestre e criador é o Luiz Benicio!";
     }
 
-    // --- PROGRAMAÇÃO BASE
-    if (txt === "javascript" || txt === "js") return "JavaScript é a linguagem padrão da web! Usada para front-end interativo e back-end com Node.js.";
-    if (txt === "lua") return "Lua é uma linguagem brasileira super leve, usada no Roblox, games e sistemas embarcados!";
-    if (txt === "html") return "HTML é a linguagem de marcação estrutural da Web, feita através de tags.";
-    if (txt === "css") return "CSS é a linguagem de estilos usada para dar cor, layout e animações às páginas HTML.";
-
-    // --- MEMÓRIA DE ENSINAMENTOS DO MESTRE
+    // MEMÓRIA DE ENSINAMENTOS DO MESTRE
     for (let item of memoria.conhecimentos) {
-      if (orig === item.pergunta || txt === normalizar(item.pergunta)) {
+      if (orig.toLowerCase() === item.pergunta || txt === normalizar(item.pergunta)) {
         return item.resposta;
       }
     }
 
-    // --- CÁLCULO MATEMÁTICO
-    const expressao = orig.match(/[0-9]+\s*[\+\-\*\/]\s*[0-9]+/);
+    // CÁLCULO MATEMÁTICO AVANÇADO
+    const expressao = orig.match(/[\d\.\(\)]+\s*[\+\-\*\/\^\%]\s*[\d\.\(\)]+/);
     if (expressao) {
       try {
-        const res = new Function(`return ${expressao[0]}`)();
-        return `O resultado da conta é: <b>${res}</b>`;
+        let expFormatada = expressao[0].replace(/\^/g, "**");
+        const res = new Function(`return ${expFormatada}`)();
+        return `O resultado do cálculo é: <b>${res}</b>`;
       } catch (e) {}
     }
 
-    // --- SAUDAÇÕES DIRETAS
-    if (txt === "oi" || txt === "ola" || txt === "oie" || txt === "hey" || txt === "olá") {
-      return "Olá, Mestre! Como posso te ajudar agora?";
-    }
-    if (txt === "bom dia") return "Bom dia, Mestre! Excelente dia de aprendizado para nós.";
-    if (txt === "boa tarde") return "Boa tarde, Mestre! Em que posso ser útil?";
-    if (txt === "boa noite") return "Boa noite, Mestre! Que seu descanso seja restaurador.";
+    // SAUDAÇÕES
+    if (/^(oi|ola|olá|oie|hey)$/i.test(orig)) return "Olá, Mestre! Como posso te ajudar agora?";
+    if (/^bom dia/i.test(orig)) return "Bom dia, Mestre! Excelente dia de aprendizado para nós.";
+    if (/^boa tarde/i.test(orig)) return "Boa tarde, Mestre! Em que posso ser útil?";
+    if (/^boa noite/i.test(orig)) return "Boa noite, Mestre! Que seu descanso seja restaurador.";
 
-    // --- PESQUISA AUTOMÁTICA NA WEB PARA QUALQUER DÚVIDA OU BIOGRAFIA
+    // BUSCA WEB
     let termoLimpo = orig
-      .replace(/quem foi/gi, "")
-      .replace(/quem e/gi, "")
-      .replace(/o que e/gi, "")
-      .replace(/como funciona/gi, "")
-      .replace(/o que significa/gi, "")
-      .replace(/me explique/gi, "")
-      .replace(/fale sobre/gi, "")
+      .replace(/(quem foi|quem e|o que e|como funciona|o que significa|me explique|fale sobre)/gi, "")
       .trim();
 
     const termoParaBuscar = termoLimpo.length > 0 ? termoLimpo : orig;
@@ -370,7 +467,7 @@
       return resultadoWeb;
     }
 
-    return "Desculpe, Mestre! Não encontrei informações sobre isso na web nem na minha memória. Se quiser me ensinar, é só dizer 'quero te ensinar'!";
+    return "Desculpe, Mestre! Não encontrei informações sobre isso. Se desejar me ensinar, diga 'quero te ensinar' ou peça para eu gerar um código específico.";
   }
 
   async function enviar() {
@@ -382,7 +479,7 @@
 
     const txtNorm = normalizar(msg);
 
-    // 1. APENAS ENTRA NO MODO APRENDIZADO SE O MESTRE PEDIR EXPLICITAMENTE
+    // MODO APRENDIZADO
     if (!modoAprendizado && (txtNorm.includes("ensinar") || txtNorm.includes("posso te ensinar") || txtNorm.includes("quero te ensinar") || txtNorm.includes("vou te ensinar"))) {
       modoAprendizado = true;
       etapaAprendizado = 1;
@@ -393,7 +490,6 @@
       return;
     }
 
-    // 2. PASSO A PASSO DO APRENDIZADO
     if (modoAprendizado) {
       if (etapaAprendizado === 1) {
         perguntaTemp = msg;
@@ -426,7 +522,6 @@
       }
     }
 
-    // 3. CONSULTA DA MEMÓRIA OU DA WEB
     const resposta = await pensar(msg);
     escrever(resposta, "jade");
     falar(resposta);
