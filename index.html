@@ -193,18 +193,18 @@
 
     <div id="chat">
       <div class="msg msg-jade">
-        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Estou pronta para responder perguntas, pesquisar na web, executar cálculos, criar códigos (JS, Lua, HTML, CSS), programar novas IAs ou aprender novos conhecimentos.
+        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Pressione <b>V</b> a qualquer momento para ver as informações do seu ambiente (hora, clima, temperatura, bateria) ou digite para conversar.
       </div>
     </div>
 
     <div class="input-box">
-      <input id="mensagem" placeholder="Digite, peça um código ou segure 'C'..." autocomplete="off">
+      <input id="mensagem" placeholder="Digite, peça um código ou use atalhos..." autocomplete="off">
       <button onclick="enviar()">Enviar</button>
       <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">Falar</button>
     </div>
 
     <div class="footer-actions">
-      <span class="shortcut-hint">Dica: Segure <b>C</b> para falar</span>
+      <span class="shortcut-hint">Dicas: Segure <b>C</b> para falar | Pressione <b>V</b> para dados do Mestre</span>
       <button class="btn-clear" onclick="limparMemoria()">Resetar aprendizado</button>
     </div>
   </div>
@@ -225,9 +225,16 @@
     if (e.key === "Enter") enviar();
   });
 
+  // ATALHOS DE TECLADO: 'C' para gravar, 'V' para relatório do Mestre
   window.addEventListener("keydown", (e) => {
-    if ((e.key === "c" || e.key === "C") && document.activeElement !== inputEl && !gravacaoAtiva) {
+    if (document.activeElement === inputEl) return;
+
+    if ((e.key === "c" || e.key === "C") && !gravacaoAtiva) {
       iniciarGravacao();
+    }
+
+    if (e.key === "v" || e.key === "V") {
+      gerarRelatorioMestre();
     }
   });
 
@@ -290,6 +297,97 @@
     return txt.toLowerCase()
               .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
               .replace(/(.)\1+/g, '$1');
+  }
+
+  function traduzirCodigoClima(code) {
+    const codigos = {
+      0: "Céu Limpo",
+      1: "Predominantemente Limpo", 2: "Parcialmente Nublado", 3: "Encoberto",
+      45: "Nevoeiro", 48: "Nevoeiro com Geada",
+      51: "Garoa Leve", 53: "Garoa Moderada", 55: "Garoa Densa",
+      61: "Chuva Leve", 63: "Chuva Moderada", 65: "Chuva Forte",
+      80: "Pancadas de Chuva Leves", 81: "Pancadas de Chuva Moderadas", 82: "Pancadas de Chuva Violentas",
+      95: "Tempestade Leve ou Moderada", 96: "Tempestade com Granizo"
+    };
+    return codigos[code] || "Condição Variável";
+  }
+
+  // COMANDO DA TECLA V: RELATÓRIO DO MESTRE
+  async function gerarRelatorioMestre() {
+    escrever("[Atalho V] Solicitando informações do ambiente...", "user");
+    
+    const agora = new Date();
+    const horaFormatada = agora.toLocaleTimeString('pt-BR');
+    const dataFormatada = agora.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    let bateriaTexto = "Indisponível";
+    if (navigator.getBattery) {
+      try {
+        const bat = await navigator.getBattery();
+        bateriaTexto = `${Math.round(bat.level * 100)}% ${bat.charging ? "(Carregando)" : "(Desconectado)"}`;
+      } catch (e) {}
+    }
+
+    let informacoesClima = "Não foi possível obter os dados de localização.";
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          try {
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,weather_code,wind_speed_10m&timezone=auto`);
+            const data = await res.json();
+            const curr = data.current;
+
+            const temp = curr.temperature_2m;
+            const sensacao = curr.apparent_temperature;
+            const umidade = curr.relative_humidity_2m;
+            const vento = curr.wind_speed_10m;
+            const chovendo = curr.precipitation > 0 || curr.rain > 0 ? "Sim, está chovendo agora." : "Não está chovendo no momento.";
+            const climaDesc = traduzirCodigoClima(curr.weather_code);
+            const sensacaoTermicaDesc = temp <= 18 ? "Frio" : temp >= 27 ? "Calor" : "Agradável / Temperado";
+
+            informacoesClima = `
+• <b>Temperatura Atual:</b> ${temp}°C (Sensação: ${sensacao}°C)
+• <b>Sensação Geral:</b> ${sensacaoTermicaDesc}
+• <b>Condição do Tempo:</b> ${climaDesc}
+• <b>Chuva:</b> ${chovendo}
+• <b>Umidade do Ar:</b> ${umidade}%
+• <b>Vento:</b> ${vento} km/h`;
+            
+            exibirRelatorioFinal(horaFormatada, dataFormatada, informacoesClima, bateriaTexto, temp, sensacaoTermicaDesc, chovendo);
+          } catch (err) {
+            exibirRelatorioFinal(horaFormatada, dataFormatada, "Falha ao consultar serviço de clima.", bateriaTexto);
+          }
+        },
+        () => {
+          exibirRelatorioFinal(horaFormatada, dataFormatada, "Permissão de localização negada pelo usuário.", bateriaTexto);
+        }
+      );
+    } else {
+      exibirRelatorioFinal(horaFormatada, dataFormatada, "Geolocalização não suportada pelo navegador.", bateriaTexto);
+    }
+  }
+
+  function exibirRelatorioFinal(hora, data, clima, bateria, temp = null, sensacaoDesc = "", chovendoDesc = "") {
+    let relatorioHTML = `
+Aqui estão suas informações atualizadas, Mestre:
+<br><br>
+🕒 <b>Horário:</b> ${hora}<br>
+📅 <b>Data:</b> ${data}<br>
+🔋 <b>Bateria do Dispositivo:</b> ${bateria}<br>
+<br>
+🌤️ <b>Dados Meteorológicos:</b>
+${clima}`;
+
+    escrever(relatorioHTML, "jade");
+
+    let textoFala = `Mestre, agora são ${hora}. `;
+    if (temp !== null) {
+      textoFala += `A temperatura atual é de ${temp} graus, com clima ${sensacaoDesc}. ${chovendoDesc}`;
+    }
+    falar(textoFala);
   }
 
   function extrairTermoBusca(frase) {
