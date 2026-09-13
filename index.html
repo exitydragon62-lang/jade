@@ -176,6 +176,10 @@
       color: #ff4d4d;
     }
 
+    audio {
+      display: none;
+    }
+
     @keyframes pulse {
       0% { opacity: 1; }
       50% { opacity: 0.5; }
@@ -194,8 +198,10 @@
     <div id="chat">
       <div class="msg msg-jade">
         <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>
-        • Pressione <b>V</b> para dados do seu ambiente.<br>
-        • Digite comandos como "adicionar tarefa [texto]", "listar tarefas", "timer 10", "gerar senha" ou faça pesquisas e peça códigos.
+        • Pressione <b>V</b> para dados do ambiente.<br>
+        • Pressione <b>M</b> para tocar uma música da web.<br>
+        • Pressione <b>N</b> para parar a música.<br>
+        • Segure <b>C</b> para falar ou digite seus comandos normalmente.
       </div>
     </div>
 
@@ -206,10 +212,12 @@
     </div>
 
     <div class="footer-actions">
-      <span class="shortcut-hint">Dicas: Segure <b>C</b> para falar | Pressione <b>V</b> para status</span>
+      <span class="shortcut-hint">Atalhos: <b>C</b> falar | <b>V</b> status | <b>M</b> música | <b>N</b> parar</span>
       <button class="btn-clear" onclick="limparMemoria()">Resetar aprendizado</button>
     </div>
   </div>
+
+  <audio id="playerMusica"></audio>
 
 <script>
   let memoria = JSON.parse(localStorage.getItem("jade_memoria")) || { conhecimentos: [], tarefas: [] };
@@ -222,6 +230,7 @@
   const inputEl = document.getElementById("mensagem");
   const chatEl = document.getElementById("chat");
   const btnMic = document.getElementById("btnOuvir");
+  const player = document.getElementById("playerMusica");
 
   inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter") enviar();
@@ -236,6 +245,14 @@
 
     if (e.key === "v" || e.key === "V") {
       gerarRelatorioMestre();
+    }
+
+    if (e.key === "m" || e.key === "M") {
+      iniciarModoMusica();
+    }
+
+    if (e.key === "n" || e.key === "N") {
+      pararMusica();
     }
   });
 
@@ -299,6 +316,53 @@
     return txt.toLowerCase()
               .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
               .replace(/(.)\1+/g, '$1');
+  }
+
+  async function iniciarModoMusica() {
+    const nomeMusica = prompt("Mestre, qual música deseja ouvir?");
+    if (!nomeMusica) return;
+
+    escrever(`[Atalho M] Buscando a música <b>"${nomeMusica}"</b> na web...`, "user");
+    falar(`Buscando a música ${nomeMusica} para você, Mestre!`);
+
+    try {
+      const res = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(nomeMusica)}&filter=music`);
+      const data = await res.json();
+
+      if (data.items && data.items.length > 0) {
+        const item = data.items[0];
+        const videoId = item.url.split("v=")[1];
+
+        const streamRes = await fetch(`https://pipedapi.kavin.rocks/streams/${videoId}`);
+        const streamData = await streamRes.json();
+
+        const audioStream = streamData.audioStreams.find(s => s.mimeType.includes("audio/mp4") || s.mimeType.includes("audio/webm"));
+
+        if (audioStream && audioStream.url) {
+          player.src = audioStream.url;
+          player.play();
+          escrever(`Tocando agora: <b>${item.title}</b><br><i>Pressione <b>N</b> a qualquer momento para parar.</i>`, "jade");
+          falar(`Tocando ${item.title} agora, Mestre!`);
+        } else {
+          escrever("Não consegui extrair o áudio dessa música no momento, Mestre.", "jade");
+        }
+      } else {
+        escrever("Não encontrei nenhuma música com esse nome na web, Mestre.", "jade");
+      }
+    } catch (e) {
+      escrever("Ocorreu um erro ao carregar a música da web, Mestre.", "jade");
+    }
+  }
+
+  function pararMusica() {
+    if (!player.paused) {
+      player.pause();
+      player.currentTime = 0;
+      escrever("[Atalho N] Música interrompida.", "jade");
+      falar("Música parada, Mestre!");
+    } else {
+      escrever("Nenhuma música está tocando no momento, Mestre.", "jade");
+    }
   }
 
   function traduzirCodigoClima(code) {
@@ -501,7 +565,6 @@ saudar("Mestre")</pre>`;
   }
 
   function gerenciarFerramentas(orig, txt) {
-    // 1. GERENCIADOR DE TAREFAS
     if (txt.startsWith("adicionar tarefa") || txt.startsWith("add tarefa") || txt.startsWith("nova tarefa")) {
       const tarefa = orig.replace(/^(adicionar tarefa|add tarefa|nova tarefa)/i, "").trim();
       if (!tarefa) return "Mestre, por favor informe o texto da tarefa após o comando.";
@@ -528,7 +591,6 @@ saudar("Mestre")</pre>`;
       return "Todas as tarefas foram apagadas da lista, Mestre!";
     }
 
-    // 2. TIMER / CRONÔMETRO DE SEGUNDOS
     if (txt.startsWith("timer") || txt.startsWith("temporizador")) {
       const segundos = parseInt(orig.replace(/\D/g, ''));
       if (isNaN(segundos) || segundos <= 0) return "Por favor, especifique o tempo em segundos. Exemplo: 'timer 10'";
@@ -541,7 +603,6 @@ saudar("Mestre")</pre>`;
       return `Timer iniciado para <b>${segundos} segundo(s)</b>, Mestre. Avisarei assim que concluir.`;
     }
 
-    // 3. GERADOR DE SENHAS SEGGURAS
     if (txt.includes("gerar senha") || txt.includes("criar senha") || txt.includes("senha forte")) {
       const caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=";
       let senha = "";
@@ -551,7 +612,6 @@ saudar("Mestre")</pre>`;
       return `Aqui está sua senha forte gerada, Mestre: <pre>${senha}</pre>`;
     }
 
-    // 4. NAVEGAÇÃO / PESQUISA NO YOUTUBE E GOOGLE
     if (txt.startsWith("pesquisar no youtube") || txt.startsWith("buscar no youtube")) {
       const termo = orig.replace(/^(pesquisar no youtube|buscar no youtube)/i, "").trim();
       if (termo) {
