@@ -1,9 +1,14 @@
+Aqui está o código completo e unificado da Jade.
+
+Ele inclui as melhorias de interpretação de texto, o comando de atalho **V** para informações do ambiente, a pesquisa na Wikipédia limpa, o gerador de código e a inclusão das novas funções de produtividade (Gerenciador de Tarefas, Timer/Cronômetro por voz ou texto e Gerador de Senhas Seguras).
+
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jade IA - Avançada</title>
+  <title>Jade IA - Completa</title>
   <style>
     * {
       box-sizing: border-box;
@@ -193,24 +198,26 @@
 
     <div id="chat">
       <div class="msg msg-jade">
-        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>Pressione <b>V</b> a qualquer momento para ver as informações do seu ambiente (hora, clima, temperatura, bateria) ou digite para conversar.
+        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>
+        • Pressione <b>V</b> para dados do seu ambiente.<br>
+        • Digite comandos como "adicionar tarefa [texto]", "listar tarefas", "timer 10", "gerar senha" ou faça pesquisas e peça códigos.
       </div>
     </div>
 
     <div class="input-box">
-      <input id="mensagem" placeholder="Digite, peça um código ou use atalhos..." autocomplete="off">
+      <input id="mensagem" placeholder="Digite, peça um comando ou use atalhos..." autocomplete="off">
       <button onclick="enviar()">Enviar</button>
       <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">Falar</button>
     </div>
 
     <div class="footer-actions">
-      <span class="shortcut-hint">Dicas: Segure <b>C</b> para falar | Pressione <b>V</b> para dados do Mestre</span>
+      <span class="shortcut-hint">Dicas: Segure <b>C</b> para falar | Pressione <b>V</b> para status</span>
       <button class="btn-clear" onclick="limparMemoria()">Resetar aprendizado</button>
     </div>
   </div>
 
 <script>
-  let memoria = JSON.parse(localStorage.getItem("jade_memoria")) || { conhecimentos: [] };
+  let memoria = JSON.parse(localStorage.getItem("jade_memoria")) || { conhecimentos: [], tarefas: [] };
   let modoAprendizado = false;
   let etapaAprendizado = 0;
   let perguntaTemp = "";
@@ -225,7 +232,6 @@
     if (e.key === "Enter") enviar();
   });
 
-  // ATALHOS DE TECLADO: 'C' para gravar, 'V' para relatório do Mestre
   window.addEventListener("keydown", (e) => {
     if (document.activeElement === inputEl) return;
 
@@ -249,10 +255,11 @@
   }
 
   function limparMemoria() {
-    if (confirm("Mestre, deseja apagar todo o aprendizado personalizado?")) {
+    if (confirm("Mestre, deseja apagar todo o aprendizado e tarefas salvas?")) {
       memoria.conhecimentos = [];
+      memoria.tarefas = [];
       salvarMemoria();
-      escrever("Minha memória de novos ensinamentos foi resetada, Mestre!", "jade");
+      escrever("Minha memória de aprendizado e lista de tarefas foram limpas, Mestre!", "jade");
     }
   }
 
@@ -312,7 +319,6 @@
     return codigos[code] || "Condição Variável";
   }
 
-  // COMANDO DA TECLA V: RELATÓRIO DO MESTRE
   async function gerarRelatorioMestre() {
     escrever("[Atalho V] Solicitando informações do ambiente...", "user");
     
@@ -499,14 +505,88 @@ saudar("Mestre")</pre>`;
     return null;
   }
 
+  function gerenciarFerramentas(orig, txt) {
+    // 1. GERENCIADOR DE TAREFAS
+    if (txt.startsWith("adicionar tarefa") || txt.startsWith("add tarefa") || txt.startsWith("nova tarefa")) {
+      const tarefa = orig.replace(/^(adicionar tarefa|add tarefa|nova tarefa)/i, "").trim();
+      if (!tarefa) return "Mestre, por favor informe o texto da tarefa após o comando.";
+      if (!memoria.tarefas) memoria.tarefas = [];
+      memoria.tarefas.push(tarefa);
+      salvarMemoria();
+      return `Tarefa adicionada com sucesso, Mestre: <b>"${tarefa}"</b>`;
+    }
+
+    if (txt.includes("listar tarefas") || txt.includes("minhas tarefas") || txt.includes("ver tarefas")) {
+      if (!memoria.tarefas || memoria.tarefas.length === 0) {
+        return "Você não possui nenhuma tarefa salva no momento, Mestre!";
+      }
+      let lista = "Sua lista de tarefas pendentes, Mestre:<br>";
+      memoria.tarefas.forEach((t, idx) => {
+        lista += `<br>${idx + 1}. ${t}`;
+      });
+      return lista;
+    }
+
+    if (txt.includes("limpar tarefas") || txt.includes("apagar tarefas")) {
+      memoria.tarefas = [];
+      salvarMemoria();
+      return "Todas as tarefas foram apagadas da lista, Mestre!";
+    }
+
+    // 2. TIMER / CRONÔMETRO DE SEGUNDOS
+    if (txt.startsWith("timer") || txt.startsWith("temporizador")) {
+      const segundos = parseInt(orig.replace(/\D/g, ''));
+      if (isNaN(segundos) || segundos <= 0) return "Por favor, especifique o tempo em segundos. Exemplo: 'timer 10'";
+      
+      setTimeout(() => {
+        escrever(`⏰ <b>Timer finalizado!</b> O tempo de ${segundos} segundo(s) terminou, Mestre!`, "jade");
+        falar(`Timer de ${segundos} segundos finalizado, Mestre!`);
+      }, segundos * 1000);
+
+      return `Timer iniciado para <b>${segundos} segundo(s)</b>, Mestre. Avisarei assim que concluir.`;
+    }
+
+    // 3. GERADOR DE SENHAS SEGGURAS
+    if (txt.includes("gerar senha") || txt.includes("criar senha") || txt.includes("senha forte")) {
+      const caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=";
+      let senha = "";
+      for (let i = 0; i < 14; i++) {
+        senha += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+      }
+      return `Aqui está sua senha forte gerada, Mestre: <pre>${senha}</pre>`;
+    }
+
+    // 4. NAVEGAÇÃO / PESQUISA NO YOUTUBE E GOOGLE
+    if (txt.startsWith("pesquisar no youtube") || txt.startsWith("buscar no youtube")) {
+      const termo = orig.replace(/^(pesquisar no youtube|buscar no youtube)/i, "").trim();
+      if (termo) {
+        window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(termo)}`, "_blank");
+        return `Pesquisando por <b>"${termo}"</b> no YouTube, Mestre!`;
+      }
+    }
+
+    if (txt.startsWith("pesquisar no google") || txt.startsWith("buscar no google")) {
+      const termo = orig.replace(/^(pesquisar no google|buscar no google)/i, "").trim();
+      if (termo) {
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(termo)}`, "_blank");
+        return `Pesquisando por <b>"${termo}"</b> no Google, Mestre!`;
+      }
+    }
+
+    return null;
+  }
+
   async function pensar(msg) {
     const orig = msg.trim();
     const txt = normalizar(orig);
 
+    const respostaFerramenta = gerenciarFerramentas(orig, txt);
+    if (respostaFerramenta) return respostaFerramenta;
+
     const respostaCodigo = processarProgramacao(orig, txt);
     if (respostaCodigo) return respostaCodigo;
 
-    if (/(youtube|abrir youtube|abre o youtube)/i.test(orig)) {
+    if (/(youtube|abrir youtube|abre o youtube)/i.test(orig) && !txt.includes("pesquisar") && !txt.includes("buscar")) {
       window.open("https://www.youtube.com", "_blank");
       return "Abrindo o YouTube para você agora mesmo, Mestre!";
     }
@@ -668,3 +748,5 @@ saudar("Mestre")</pre>`;
 
 </body>
 </html>
+
+```
