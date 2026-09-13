@@ -176,7 +176,7 @@
       color: #ff4d4d;
     }
 
-    .music-container {
+    .video-container {
       margin-top: 10px;
       width: 100%;
       border-radius: 10px;
@@ -185,7 +185,7 @@
 
     iframe {
       width: 100%;
-      height: 180px;
+      height: 200px;
       border: none;
       border-radius: 10px;
     }
@@ -209,8 +209,8 @@
       <div class="msg msg-jade">
         <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>
         • Pressione <b>V</b> para dados do ambiente.<br>
-        • Pressione <b>M</b> para ouvir uma música.<br>
-        • Pressione <b>N</b> para parar a música.<br>
+        • Pressione <b>M</b> para assistir/ouvir um vídeo do YouTube.<br>
+        • Pressione <b>N</b> para fechar o vídeo.<br>
         • Segure <b>C</b> para falar ou digite seus comandos normalmente.
       </div>
     </div>
@@ -222,7 +222,7 @@
     </div>
 
     <div class="footer-actions">
-      <span class="shortcut-hint">Atalhos: <b>C</b> falar | <b>V</b> status | <b>M</b> música | <b>N</b> parar</span>
+      <span class="shortcut-hint">Atalhos: <b>C</b> falar | <b>V</b> status | <b>M</b> vídeo/música | <b>N</b> parar</span>
       <button class="btn-clear" onclick="limparMemoria()">Resetar aprendizado</button>
     </div>
   </div>
@@ -256,11 +256,11 @@
     }
 
     if (e.key === "m" || e.key === "M") {
-      iniciarModoMusica();
+      iniciarModoVideo();
     }
 
     if (e.key === "n" || e.key === "N") {
-      pararMusica();
+      pararVideo();
     }
   });
 
@@ -327,38 +327,65 @@
               .replace(/(.)\1+/g, '$1');
   }
 
-  function iniciarModoMusica() {
-    const nomeMusica = prompt("Mestre, qual música deseja ouvir?");
-    if (!nomeMusica) return;
+  async function buscarVideoYouTube(termo) {
+    try {
+      // Busca de ID via API Invidious/Piped (pública e rápida)
+      const res = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(termo)}&filter=all`);
+      const data = await res.json();
+      if (data.items && data.items.length > 0) {
+        const item = data.items.find(i => i.type === 'stream');
+        if (item) {
+          const videoId = item.url.replace('/watch?v=', '');
+          return { id: videoId, title: item.title };
+        }
+      }
+    } catch (e) {
+      console.log("Erro na busca direta:", e);
+    }
+    return null;
+  }
 
-    escrever(`[Atalho M] Colocando a música <b>"${nomeMusica}"</b> para tocar...`, "user");
+  async function iniciarModoVideo() {
+    const nomeVideo = prompt("Mestre, qual vídeo ou música deseja buscar no YouTube?");
+    if (!nomeVideo) return;
+
+    escrever(`[Atalho M] Buscando vídeo <b>"${nomeVideo}"</b>...`, "user");
+    falar(`Buscando ${nomeVideo} para você, Mestre!`);
+
+    const videoInfo = await buscarVideoYouTube(nomeVideo);
     
     const idContainer = "player-" + Date.now();
     playerAtualId = idContainer;
 
-    const embedUrl = `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(nomeMusica)}&autoplay=1`;
+    if (videoInfo && videoInfo.id) {
+      const embedUrl = `https://www.youtube.com/embed/${videoInfo.id}?autoplay=1`;
+      const htmlResposta = `Reproduzindo <b>"${videoInfo.title}"</b> para você, Mestre!<br><small>Pressione <b>N</b> a qualquer momento para fechar o vídeo.</small>
+      <div id="${idContainer}" class="video-container">
+        <iframe src="${embedUrl}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+      </div>`;
 
-    const htmlResposta = `Tocando <b>"${nomeMusica}"</b> para você, Mestre!<br><small>Pressione <b>N</b> a qualquer momento para parar a música.</small>
-    <div id="${idContainer}" class="music-container">
-      <iframe src="${embedUrl}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-    </div>`;
-
-    escrever(htmlResposta, "jade");
-    falar(`Tocando a música ${nomeMusica} para você, Mestre!`);
+      escrever(htmlResposta, "jade");
+      falar(`Reproduzindo o vídeo ${videoInfo.title} para você, Mestre!`);
+    } else {
+      // Fallback para abrir a busca direta no YouTube se não puder ler o ID
+      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(nomeVideo)}`, "_blank");
+      escrever(`Mestre, abri a pesquisa de <b>"${nomeVideo}"</b> no YouTube!`, "jade");
+      falar(`Abrindo a pesquisa de ${nomeVideo} no YouTube para você, Mestre!`);
+    }
   }
 
-  function pararMusica() {
+  function pararVideo() {
     if (playerAtualId) {
       const el = document.getElementById(playerAtualId);
       if (el) {
         el.remove();
         playerAtualId = null;
-        escrever("[Atalho N] Música encerrada com sucesso, Mestre.", "jade");
-        falar("Música parada, Mestre!");
+        escrever("[Atalho N] Reprodução de vídeo encerrada com sucesso, Mestre.", "jade");
+        falar("Vídeo encerrado, Mestre!");
         return;
       }
     }
-    escrever("Nenhuma música tocando no momento, Mestre.", "jade");
+    escrever("Nenhum vídeo em execução no momento, Mestre.", "jade");
   }
 
   function traduzirCodigoClima(code) {
@@ -638,7 +665,7 @@ saudar("Mestre")</pre>`;
     if (respostaCodigo) return respostaCodigo;
 
     if (/(quem e voce|quem e vc|qual seu nome|o que voce e|oque voce e|oque vc e|o que vc e)/i.test(orig)) {
-      return "Eu sou uma IA feita para ajudar meu mestre Luiz Benício! Sou sua assistente pessoal para pesquisas, automações, tarefas do dia a dia, músicas e códigos.";
+      return "Eu sou uma IA feita para ajudar meu mestre Luiz Benício! Sou sua assistente pessoal para pesquisas, automações, tarefas do dia a dia, vídeos, músicas e códigos.";
     }
 
     if (/(criador|quem te fez|seu mestre|luiz benicio)/i.test(orig)) {
