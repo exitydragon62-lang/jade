@@ -209,7 +209,7 @@
       <div class="msg msg-jade">
         <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>
         • Pressione <b>V</b> para dados do ambiente.<br>
-        • Pressione <b>M</b> para abrir qualquer site.<br>
+        • Pressione <b>M</b> para comando de abrir site.<br>
         • Pressione <b>N</b> para fechar mídias e voltar para a Jade.<br>
         • Segure <b>C</b> para falar ou digite seus comandos normalmente.
       </div>
@@ -256,10 +256,12 @@
     }
 
     if (e.key === "m" || e.key === "M") {
-      abrirSiteMestre();
+      e.preventDefault();
+      prepararAberturaSite();
     }
 
     if (e.key === "n" || e.key === "N") {
+      e.preventDefault();
       voltarParaJade();
     }
   });
@@ -327,19 +329,21 @@
               .replace(/(.)\1+/g, '$1');
   }
 
-  function abrirSiteMestre() {
-    const siteEntrada = prompt("Mestre, qual site deseja acessar?");
-    if (!siteEntrada) return;
+  function prepararAberturaSite() {
+    inputEl.value = "/abrir ";
+    inputEl.focus();
+    escrever("[Atalho M] Digite o endereço do site que deseja acessar e pressione Enter.", "jade");
+  }
 
-    let urlFinal = siteEntrada.trim();
+  function executarAberturaSite(urlDigitada) {
+    let urlFinal = urlDigitada.trim();
     if (!urlFinal.startsWith("http://") && !urlFinal.startsWith("https://")) {
       urlFinal = "https://" + urlFinal;
     }
 
-    escrever(`[Atalho M] Abrindo o site <b>"${urlFinal}"</b>...`, "user");
     window.open(urlFinal, "_blank");
 
-    escrever(`Site <b>"${urlFinal}"</b> aberto com sucesso em uma nova aba, Mestre!`, "jade");
+    escrever(`Redirecionando para <b>"${urlFinal}"</b>, Mestre!`, "jade");
     falar(`Abrindo o site para você, Mestre!`);
   }
 
@@ -350,6 +354,7 @@
       playerAtualId = null;
     }
 
+    inputEl.value = "";
     inputEl.focus();
     escrever("[Atalho N] Retornamos ao chat da Jade, Mestre. Em que posso te ajudar agora?", "jade");
     falar("De volta para a Jade, Mestre!");
@@ -625,6 +630,14 @@ saudar("Mestre")</pre>`;
     const orig = msg.trim();
     const txt = normalizar(orig);
 
+    if (orig.startsWith("/abrir ")) {
+      const urlAlvo = orig.replace("/abrir ", "").trim();
+      if (urlAlvo) {
+        executarAberturaSite(urlAlvo);
+        return null;
+      }
+    }
+
     const respostaFerramenta = gerenciarFerramentas(orig, txt);
     if (respostaFerramenta) return respostaFerramenta;
 
@@ -733,8 +746,10 @@ saudar("Mestre")</pre>`;
     }
 
     const resposta = await pensar(msg);
-    escrever(resposta, "jade");
-    falar(resposta);
+    if (resposta) {
+      escrever(resposta, "jade");
+      falar(resposta);
+    }
   }
 
   function iniciarGravacao(e) {
