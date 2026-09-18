@@ -1,882 +1,260 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jade IA - Completa com Modo 3D Interativo</title>
-  
-  <!-- Three.js para renderização 3D -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- OrbitControls para Zoom (Pinça), Pan e Rotação 3D -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Versão Definitiva - Bracelete & Modo 3D</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            overflow: hidden;
+            background-color: #0d0d11;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+        /* Painel HUD */
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #ffffff;
+            background: rgba(15, 15, 25, 0.85);
+            backdrop-filter: blur(8px);
+            padding: 18px 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            z-index: 10;
+            pointer-events: none;
+            min-width: 280px;
+        }
 
-    body {
-      background: #0d0814;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      padding: 15px;
-      color: #ffffff;
-    }
+        #status-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
 
-    .app {
-      width: 100%;
-      max-width: 550px;
-      background: #181124;
-      padding: 20px;
-      border-radius: 20px;
-      border: 1px solid #3b235d;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(138, 43, 226, 0.2);
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
+        #status-mode {
+            font-weight: 800;
+            font-size: 1.1em;
+            letter-spacing: 1px;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
 
-    .header {
-      text-align: center;
-    }
+        .active-bg {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            border: 1px solid #00ff88;
+        }
 
-    h1 {
-      color: #b366ff;
-      margin: 0;
-      font-size: 26px;
-      text-shadow: 0 0 8px rgba(179, 102, 255, 0.4);
-    }
+        .inactive-bg {
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff4444;
+            border: 1px solid #ff4444;
+        }
 
-    .subtitle {
-      color: #a0a0b0;
-      font-size: 13px;
-      margin-top: 4px;
-      font-weight: 500;
-    }
+        .instructions {
+            font-size: 0.85em;
+            color: #a0a0b0;
+            line-height: 1.6;
+        }
 
-    #chat {
-      background: #09050e;
-      height: 380px;
-      overflow-y: auto;
-      padding: 15px;
-      border-radius: 14px;
-      border: 1px solid #2a1942;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
-    }
+        .key {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
 
-    .msg {
-      max-width: 90%;
-      padding: 10px 14px;
-      border-radius: 15px;
-      font-size: 14px;
-      line-height: 1.4;
-      word-wrap: break-word;
-    }
-
-    .msg-jade {
-      align-self: flex-start;
-      background: #251638;
-      color: #f0e6ff;
-      border-bottom-left-radius: 2px;
-      border: 1px solid #4c287a;
-    }
-
-    .msg-user {
-      align-self: flex-end;
-      background: #7928ca;
-      color: #ffffff;
-      border-bottom-right-radius: 2px;
-    }
-
-    /* Painel do Estúdio 3D */
-    #container-3d {
-      display: none;
-      background: #05020a;
-      border: 1px solid #7928ca;
-      border-radius: 14px;
-      padding: 10px;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    #canvas-3d {
-      width: 100%;
-      height: 250px;
-      border-radius: 10px;
-      background: #000;
-      touch-action: none; /* Permite capturar gestos de pinça sem rolar a página */
-    }
-
-    .controles-3d {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .controles-3d select, .controles-3d input, .controles-3d button {
-      background: #181124;
-      border: 1px solid #3b235d;
-      color: #fff;
-      padding: 6px;
-      border-radius: 8px;
-      font-size: 12px;
-    }
-
-    .checkbox-container {
-      grid-column: span 2;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: #00ffcc;
-    }
-
-    .input-box {
-      display: flex;
-      gap: 8px;
-    }
-
-    input[type="text"] {
-      flex: 1;
-      padding: 12px 15px;
-      background: #09050e;
-      border: 1px solid #3b235d;
-      border-radius: 12px;
-      outline: none;
-      font-size: 14px;
-      color: #ffffff;
-    }
-
-    input[type="text"]:focus {
-      border-color: #9d4edf;
-      box-shadow: 0 0 8px rgba(157, 78, 223, 0.4);
-    }
-
-    button {
-      padding: 12px 15px;
-      border: 0;
-      border-radius: 12px;
-      background: #7928ca;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-    }
-
-    button:hover {
-      background: #9d4edf;
-    }
-
-    button:active {
-      transform: scale(0.95);
-    }
-
-    .btn-mic {
-      background: #4c287a;
-      user-select: none;
-    }
-
-    .btn-mic.recording {
-      background: #ff2a6d;
-      animation: pulse 1s infinite;
-    }
-
-    .footer-actions {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .shortcut-hint {
-      font-size: 11px;
-      color: #6e6e8d;
-    }
-
-    .btn-clear {
-      background: transparent;
-      color: #a0a0b0;
-      font-size: 11px;
-      padding: 0;
-      text-decoration: underline;
-      cursor: pointer;
-    }
-
-    .btn-clear:hover {
-      color: #ff4d4d;
-    }
-
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
-      100% { opacity: 1; }
-    }
-  </style>
+    <!-- Libs do Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
 </head>
 <body>
 
-  <div class="app">
-    <div class="header">
-      <h1>Jade IA</h1>
-      <div class="subtitle">Criada por Luiz Benicio</div>
-    </div>
-
-    <!-- Estúdio de Projetos 3D -->
-    <div id="container-3d">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size: 13px; font-weight: bold; color: #b366ff;">Modo 01110100 - Visualizador 3D</span>
-        <button style="padding: 2px 8px; font-size: 10px;" onclick="fecharModo3D()">Fechar 3D</button>
-      </div>
-      <div id="canvas-3d"></div>
-      <div class="controles-3d">
-        <select id="selectForma">
-          <option value="torus">Pulseira / Torus (Anel)</option>
-          <option value="cube">Cubo / Bloco</option>
-          <option value="sphere">Esfera / Bola</option>
-          <option value="cylinder">Cilindro / Tubo</option>
-          <option value="cone">Cone / Pirâmide</option>
-        </select>
-        <select id="selectMaterial">
-          <option value="phong">Brilhante (Padrão)</option>
-          <option value="standard">Metálico</option>
-          <option value="glass">Vidro / Reflexivo</option>
-        </select>
-        <input type="color" id="corObjeto" value="#b366ff">
-        <button onclick="adicionarForma3DManual()">Adicionar Forma</button>
-        <div class="checkbox-container">
-          <input type="checkbox" id="chkMesclar">
-          <label for="chkMesclar">Mesclar com o projeto atual</label>
+    <div id="hud">
+        <div id="status-container">
+            <span>MODO 3D:</span>
+            <span id="status-mode" class="active-bg">ATIVO</span>
         </div>
-        <button onclick="limparCena3D()" style="background:#4c287a;">Limpar Cenas</button>
-        <button onclick="salvarProjeto3D()" style="background:#00b386;">Salvar Projeto</button>
-      </div>
+        <div class="instructions">
+            • Pressiona <span class="key">Y</span> para Ativar / Desativar<br>
+            • Quando ativo, <b>qualquer coisa digitada</b> vira 3D<br>
+            • <span class="key">Backspace</span> Apaga | <span class="key">Espaço</span> Limpa
+        </div>
     </div>
 
-    <div id="chat">
-      <div class="msg msg-jade">
-        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>
-        • Pressione <b>V</b> para dados do ambiente.<br>
-        • Pressione <b>M</b> para abrir qualquer site.<br>
-        • Pressione <b>T</b> para ativar o Modo 3D (ou diga <i>01110100</i>).<br>
-        • Pressione <b>N</b> para voltar ao foco no chat.<br>
-        • Segure <b>C</b> para falar.
-      </div>
-    </div>
+    <script>
+        // Variáveis do Estado do Sistema
+        let is3DActive = true;
+        let currentText = "BRACELETE 3D";
+        let textMesh = null;
+        let loadedFont = null;
+        let braceletGroup = new THREE.Group();
 
-    <div class="input-box">
-      <input id="mensagem" type="text" placeholder="Digite, peça um comando ou use atalhos..." autocomplete="off">
-      <button onclick="enviar()">Enviar</button>
-      <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">Falar</button>
-    </div>
-
-    <div class="footer-actions">
-      <span class="shortcut-hint">Atalhos: <b>C</b> falar | <b>V</b> status | <b>M</b> site | <b>T</b> modo 3D | <b>N</b> voltar</span>
-      <button class="btn-clear" onclick="limparMemoria()">Resetar aprendizado</button>
-    </div>
-  </div>
-
-<script>
-  let memoria = JSON.parse(localStorage.getItem("jade_memoria")) || { conhecimentos: [], tarefas: [], projetos3D: [] };
-  let modoAprendizado = false;
-  let etapaAprendizado = 0;
-  let perguntaTemp = "";
-  let gravacaoAtiva = false;
-  let rec = null;
-
-  // Variáveis do Three.js e OrbitControls
-  let modo3DAtivo = false;
-  let scene3D, camera3D, renderer3D, grupoProjeto3D, controls3D;
-  let animId3D = null;
-
-  const inputEl = document.getElementById("mensagem");
-  const chatEl = document.getElementById("chat");
-  const btnMic = document.getElementById("btnOuvir");
-
-  inputEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") enviar();
-  });
-
-  window.addEventListener("keydown", (e) => {
-    if (document.activeElement === inputEl) return;
-
-    if ((e.key === "c" || e.key === "C") && !gravacaoAtiva) {
-      iniciarGravacao();
-    }
-
-    if (e.key === "v" || e.key === "V") {
-      gerarRelatorioMestre();
-    }
-
-    if (e.key === "m" || e.key === "M") {
-      e.preventDefault();
-      prepararAberturaSite();
-    }
-
-    if (e.key === "t" || e.key === "T") {
-      e.preventDefault();
-      ativarModo3D();
-    }
-
-    if (e.key === "n" || e.key === "N") {
-      e.preventDefault();
-      voltarParaJade();
-    }
-  });
-
-  window.addEventListener("keyup", (e) => {
-    if ((e.key === "c" || e.key === "C") && gravacaoAtiva) {
-      pararGravacao();
-    }
-  });
-
-  function salvarMemoria() {
-    localStorage.setItem("jade_memoria", JSON.stringify(memoria));
-  }
-
-  function limparMemoria() {
-    if (confirm("Mestre, deseja apagar todo o aprendizado, tarefas e projetos 3D salvos?")) {
-      memoria.conhecimentos = [];
-      memoria.tarefas = [];
-      memoria.projetos3D = [];
-      salvarMemoria();
-      escrever("Toda a minha memória de aprendizado e projetos foi limpa, Mestre!", "jade");
-    }
-  }
-
-  function falar(texto) {
-    if (!('speechSynthesis' in window)) return;
-    let textoLimpo = texto.replace(/<[^>]*>?/gm, '');
-    if (textoLimpo.length > 200) {
-      textoLimpo = textoLimpo.substring(0, 200) + "... O restante está exibido no chat, Mestre!";
-    }
-    
-    speechSynthesis.cancel();
-    const voz = new SpeechSynthesisUtterance(textoLimpo);
-    voz.lang = "pt-BR";
-    voz.pitch = 1.2;
-    voz.rate = 1.0;
-
-    const voces = speechSynthesis.getVoices();
-    const vozFeminina = voces.find(v => v.lang.includes("pt") && (v.name.includes("Luciana") || v.name.includes("Yelda") || v.name.includes("Google português do Brasil") || v.name.includes("Maria") || v.name.includes("Helena")));
-    
-    if (vozFeminina) voz.voice = vozFeminina;
-
-    speechSynthesis.speak(voz);
-  }
-
-  function escrever(texto, remetente) {
-    const div = document.createElement("div");
-    div.classList.add("msg");
-    
-    if (remetente === "user") {
-      div.classList.add("msg-user");
-      div.innerHTML = `<b>Mestre:</b> ${texto}`;
-    } else {
-      div.classList.add("msg-jade");
-      div.innerHTML = `<b>Jade:</b> ${texto}`;
-    }
-
-    chatEl.appendChild(div);
-    chatEl.scrollTop = chatEl.scrollHeight;
-    return div;
-  }
-
-  function normalizar(txt) {
-    return txt.toLowerCase()
-              .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-              .replace(/(.)\1+/g, '$1')
-              .replace(/[?!=.,;]/g, ' ')
-              .trim();
-  }
-
-  // --- MÓDULO 3D (THREE.JS + ORBIT CONTROLS) ---
-  function inicializarCena3D() {
-    const container = document.getElementById("canvas-3d");
-    container.innerHTML = "";
-
-    scene3D = new THREE.Scene();
-    camera3D = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera3D.position.set(0, 0, 5);
-
-    renderer3D = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer3D.setSize(container.clientWidth, container.clientHeight);
-    renderer3D.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer3D.domElement);
-
-    // Configuração dos controles de Pinça / Rotação / Zoom
-    controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
-    controls3D.enableDamping = true;
-    controls3D.dampingFactor = 0.05;
-    controls3D.enableZoom = true;
-    controls3D.enableRotate = true;
-    controls3D.touches = {
-      ONE: THREE.TOUCH.ROTATE,
-      TWO: THREE.TOUCH.DOLLY_PAN
-    };
-
-    const luzLado = new THREE.DirectionalLight(0xffffff, 1);
-    luzLado.position.set(5, 5, 5).normalize();
-    scene3D.add(luzLado);
-
-    const luzAmbiente = new THREE.AmbientLight(0x404040, 1.5);
-    scene3D.add(luzAmbiente);
-
-    grupoProjeto3D = new THREE.Group();
-    scene3D.add(grupoProjeto3D);
-
-    function renderizarLoop() {
-      animId3D = requestAnimationFrame(renderizarLoop);
-      if (controls3D) controls3D.update();
-      renderer3D.render(scene3D, camera3D);
-    }
-    renderizarLoop();
-  }
-
-  function ativarModo3D() {
-    modo3DAtivo = true;
-    document.getElementById("container-3d").style.display = "flex";
-    inicializarCena3D();
-    
-    escrever("[Modo 01110100] Estúdio 3D ativado, Mestre! Use gestos de pinça para zoom ou arraste para girar a estrutura.", "jade");
-    falar("Modo 3D de projetos ativado, Mestre!");
-  }
-
-  function fecharModo3D() {
-    modo3DAtivo = false;
-    document.getElementById("container-3d").style.display = "none";
-    if (animId3D) cancelAnimationFrame(animId3D);
-  }
-
-  function criarGeometria(tipo) {
-    switch (tipo) {
-      case 'torus': return new THREE.TorusGeometry(1.2, 0.4, 16, 100);
-      case 'cube': return new THREE.BoxGeometry(1.5, 1.5, 1.5);
-      case 'sphere': return new THREE.SphereGeometry(1.2, 32, 32);
-      case 'cylinder': return new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
-      case 'cone': return new THREE.ConeGeometry(1, 2, 32);
-      default: return new THREE.BoxGeometry(1, 1, 1);
-    }
-  }
-
-  function criarMaterial3D(tipo, corHex) {
-    const color = new THREE.Color(corHex);
-    if (tipo === 'standard') {
-      return new THREE.MeshStandardMaterial({ color, roughness: 0.2, metalness: 0.8 });
-    } else if (tipo === 'glass') {
-      return new THREE.MeshPhysicalMaterial({ color, roughness: 0.1, transmission: 0.9, opacity: 1, transparent: true });
-    } else {
-      return new THREE.MeshPhongMaterial({ color, shininess: 100 });
-    }
-  }
-
-  function adicionarObjeto3D(tipoForma, tipoMaterial, corHex) {
-    const chkMesclar = document.getElementById("chkMesclar").checked;
-    if (!chkMesclar) {
-      limparCena3D();
-    }
-
-    const geo = criarGeometria(tipoForma);
-    const mat = criarMaterial3D(tipoMaterial, corHex);
-    const mesh = new THREE.Mesh(geo, mat);
-
-    if (chkMesclar && grupoProjeto3D.children.length > 0) {
-      mesh.position.set((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2);
-    }
-
-    grupoProjeto3D.add(mesh);
-  }
-
-  function adicionarForma3DManual() {
-    const forma = document.getElementById("selectForma").value;
-    const material = document.getElementById("selectMaterial").value;
-    const cor = document.getElementById("corObjeto").value;
-    adicionarObjeto3D(forma, material, cor);
-  }
-
-  function limparCena3D() {
-    if (grupoProjeto3D) {
-      while (grupoProjeto3D.children.length > 0) {
-        grupoProjeto3D.remove(grupoProjeto3D.children[0]);
-      }
-    }
-  }
-
-  function salvarProjeto3D() {
-    if (!grupoProjeto3D || grupoProjeto3D.children.length === 0) {
-      alert("Não há objetos no projeto 3D para salvar, Mestre!");
-      return;
-    }
-
-    const nomeProjeto = prompt("Digite o nome do projeto 3D:", "Projeto Jade " + (memoria.projetos3D ? memoria.projetos3D.length + 1 : 1));
-    if (!nomeProjeto) return;
-
-    const dadosObjetos = grupoProjeto3D.children.map(obj => ({
-      tipoForma: obj.geometry.type,
-      cor: "#" + obj.material.color.getHexString(),
-      posicao: { x: obj.position.x, y: obj.position.y, z: obj.position.z }
-    }));
-
-    if (!memoria.projetos3D) memoria.projetos3D = [];
-    memoria.projetos3D.push({
-      nome: nomeProjeto,
-      data: new Date().toLocaleDateString('pt-BR'),
-      objetos: dadosObjetos
-    });
-
-    salvarMemoria();
-    escrever(`Projeto 3D <b>"${nomeProjeto}"</b> salvo com sucesso na minha memória, Mestre!`, "jade");
-    falar(`Projeto ${nomeProjeto} salvo na minha memória!`);
-  }
-
-  function interpretarVozPara3D(texto) {
-    const t = normalizar(texto);
-    let formaDetectada = null;
-    let nomeObjeto = "";
-
-    if (/\b(pulseira|anel|rosca|torus|rosquinha|coroa)\b/.test(t)) {
-      formaDetectada = 'torus';
-      nomeObjeto = "pulseira / anel";
-    } else if (/\b(caixa|cubo|bloco|quadrado|dado)\b/.test(t)) {
-      formaDetectada = 'cube';
-      nomeObjeto = "cubo / caixa";
-    } else if (/\b(bola|esfera|globo|orbe)\b/.test(t)) {
-      formaDetectada = 'sphere';
-      nomeObjeto = "esfera";
-    } else if (/\b(cilindro|tubo|lata|barril)\b/.test(t)) {
-      formaDetectada = 'cylinder';
-      nomeObjeto = "cilindro";
-    } else if (/\b(cone|piramide|chapeu)\b/.test(t)) {
-      formaDetectada = 'cone';
-      nomeObjeto = "cone";
-    }
-
-    if (formaDetectada) {
-      const cor = document.getElementById("corObjeto").value;
-      const mat = document.getElementById("selectMaterial").value;
-      adicionarObjeto3D(formaDetectada, mat, cor);
-      
-      const resposta = `Entendido, Mestre! Gere um modelo 3D de <b>${nomeObjeto}</b> no estúdio.`;
-      escrever(resposta, "jade");
-      falar(`Gerando modelo 3D de ${nomeObjeto} para você, Mestre!`);
-      return true;
-    }
-    return false;
-  }
-
-  // --- NAVEGAÇÃO E RECURSOS DO SISTEMA ---
-  function prepararAberturaSite() {
-    inputEl.value = "/abrir ";
-    inputEl.focus();
-    escrever("[Atalho M] Digite o nome ou URL do site que deseja acessar e pressione Enter.", "jade");
-  }
-
-  function executarAberturaSite(urlDigitada) {
-    let urlFinal = urlDigitada.trim();
-    if (!urlFinal.includes(".") && !urlFinal.startsWith("http")) {
-      urlFinal += ".com";
-    }
-    if (!urlFinal.startsWith("http://") && !urlFinal.startsWith("https://")) {
-      urlFinal = "https://" + urlFinal;
-    }
-
-    window.open(urlFinal, "_blank");
-    escrever(`Redirecionando para <b>"${urlFinal}"</b>, Mestre!`, "jade");
-    falar(`Abrindo o site para você, Mestre!`);
-  }
-
-  function voltarParaJade() {
-    fecharModo3D();
-    inputEl.value = "";
-    inputEl.focus();
-    
-    const msgRetorno = "De volta ao chat da Jade, Mestre! Em que posso te ajudar?";
-    escrever(`[Atalho N] ${msgRetorno}`, "jade");
-    falar("De volta para a Jade, Mestre!");
-  }
-
-  function traduzirCodigoClima(code) {
-    const codigos = {
-      0: "Céu Limpo", 1: "Predominantemente Limpo", 2: "Parcialmente Nublado", 3: "Encoberto",
-      45: "Nevoeiro", 48: "Nevoeiro com Geada", 51: "Garoa Leve", 53: "Garoa Moderada", 55: "Garoa Densa",
-      61: "Chuva Leve", 63: "Chuva Moderada", 65: "Chuva Forte", 80: "Pancadas de Chuva Leves",
-      95: "Tempestade Leve ou Moderada"
-    };
-    return codigos[code] || "Condição Variável";
-  }
-
-  async function gerarRelatorioMestre() {
-    escrever("[Atalho V] Solicitando informações do ambiente...", "user");
-    
-    const agora = new Date();
-    const horaFormatada = agora.toLocaleTimeString('pt-BR');
-    const dataFormatada = agora.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-    let bateriaTexto = "Indisponível";
-    if (navigator.getBattery) {
-      try {
-        const bat = await navigator.getBattery();
-        bateriaTexto = `${Math.round(bat.level * 100)}% ${bat.charging ? "(Carregando)" : "(Desconectado)"}`;
-      } catch (e) {}
-    }
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const lat = pos.coords.latitude;
-          const lon = pos.coords.longitude;
-          try {
-            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=auto`);
-            const data = await res.json();
-            const curr = data.current;
-
-            const temp = curr.temperature_2m;
-            const climaDesc = traduzirCodigoClima(curr.weather_code);
-
-            const informacoesClima = `
-• <b>Temperatura Atual:</b> ${temp}°C
-• <b>Condição:</b> ${climaDesc}
-• <b>Umidade:</b> ${curr.relative_humidity_2m}%`;
-            
-            exibirRelatorioFinal(horaFormatada, dataFormatada, informacoesClima, bateriaTexto, temp);
-          } catch (err) {
-            exibirRelatorioFinal(horaFormatada, dataFormatada, "Falha ao consultar serviço de clima.", bateriaTexto);
-          }
-        },
-        () => exibirRelatorioFinal(horaFormatada, dataFormatada, "Permissão de localização negada.", bateriaTexto)
-      );
-    } else {
-      exibirRelatorioFinal(horaFormatada, dataFormatada, "Geolocalização indisponível.", bateriaTexto);
-    }
-  }
-
-  function exibirRelatorioFinal(hora, data, clima, bateria, temp = null) {
-    let relatorioHTML = `
-Aqui estão suas informações atualizadas, Mestre:
-<br><br>
-<b>Horário:</b> ${hora}<br>
-<b>Data:</b> ${data}<br>
-<b>Bateria:</b> ${bateria}<br>
-<br>
-<b>Dados Meteorológicos:</b>
-${clima}`;
-
-    escrever(relatorioHTML, "jade");
-    falar(`Mestre, agora são ${hora}. ${temp ? `A temperatura atual é de ${temp} graus.` : ''}`);
-  }
-
-  async function pesquisarNaWeb(termoBruto) {
-    try {
-      const urlBusca = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(termoBruto)}&format=json&origin=*`;
-      const resBusca = await fetch(urlBusca);
-      const dataBusca = await resBusca.json();
-
-      if (dataBusca.query && dataBusca.query.search.length > 0) {
-        const tituloArtigo = dataBusca.query.search[0].title;
-        const urlResumo = `https://pt.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(tituloArtigo)}&format=json&origin=*`;
-        const resResumo = await fetch(urlResumo);
-        const dataResumo = await resResumo.json();
+        // 1. Configuração do Cenário
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         
-        const pages = dataResumo.query.pages;
-        const pageId = Object.keys(pages)[0];
-        
-        if (pageId !== "-1" && pages[pageId].extract) {
-          return pages[pageId].extract;
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 2. Iluminação do Ambiente
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0x00ff88, 2, 80);
+        pointLight1.position.set(15, 20, 15);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0xffd700, 1.5, 80); // Luz dourada para destacar o metal
+        pointLight2.position.set(-15, -10, 15);
+        scene.add(pointLight2);
+
+        camera.position.set(0, 0, 30);
+
+        // 3. Criação do Bracelete (Fusão Geômétrica: Torus Hexagonal/Quadrado)
+        function createBracelet() {
+            // Material Dourado com Alto Brilho
+            const goldMaterial = new THREE.MeshStandardMaterial({
+                color: 0xd4af37,
+                metalness: 0.9,
+                roughness: 0.15
+            });
+
+            // Estrutura Base Rígida (Torus com perfis geométricos)
+            const ringGeometry = new THREE.TorusGeometry(6, 0.6, 6, 32); 
+            const mainRing = new THREE.Mesh(ringGeometry, goldMaterial);
+            braceletGroup.add(mainRing);
+
+            // Adicionar Elementos Cúbicos/Retangulares interligados (Fusão de Formas)
+            const boxGeometry = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const box = new THREE.Mesh(boxGeometry, goldMaterial);
+                box.position.x = Math.cos(angle) * 6;
+                box.position.y = Math.sin(angle) * 6;
+                box.rotation.z = angle;
+                box.rotation.x = Math.PI / 4;
+                braceletGroup.add(box);
+            }
+
+            scene.add(braceletGroup);
         }
-      }
-    } catch (e) {}
-    return null;
-  }
 
-  async function pensar(msg) {
-    const orig = msg.trim();
-    const txt = normalizar(orig);
+        createBracelet();
 
-    if (orig.startsWith("/abrir ")) {
-      const urlAlvo = orig.replace("/abrir ", "").trim();
-      if (urlAlvo) {
-        executarAberturaSite(urlAlvo);
-        return null;
-      }
-    }
+        // 4. Carregamento de Fonte e Criação do Texto 3D
+        const loader = new THREE.FontLoader();
+        loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+            loadedFont = font;
+            update3DText();
+        });
 
-    if (txt.includes("01110100") || txt.includes("modo 3d") || txt.includes("ativar modo 3d")) {
-      ativarModo3D();
-      return null;
-    }
+        function update3DText() {
+            if (!loadedFont) return;
 
-    if (modo3DAtivo) {
-      const processado3D = interpretarVozPara3D(orig);
-      if (processado3D) return null;
-    }
+            if (textMesh) {
+                scene.remove(textMesh);
+                textMesh.geometry.dispose();
+            }
 
-    if (txt.includes("listar projetos") || txt.includes("ver projetos 3d")) {
-      if (!memoria.projetos3D || memoria.projetos3D.length === 0) {
-        return "Você não tem nenhum projeto 3D salvo na memória, Mestre!";
-      }
-      let lista = "Seus projetos 3D salvos, Mestre:<br>";
-      memoria.projetos3D.forEach((p, idx) => {
-        lista += `<br>${idx + 1}. <b>${p.nome}</b> (${p.data}) - ${p.objetos.length} objeto(s)`;
-      });
-      return lista;
-    }
+            if (currentText.length === 0) return;
 
-    if (/\b(quem e voce|qual seu nome)\b/.test(txt)) {
-      return "Eu sou a Jade, sua assistente virtual pessoal! Criada para te auxiliar em pesquisas, comandos, navegação e gerenciamento de projetos 3D.";
-    }
+            const textGeometry = new THREE.TextGeometry(currentText, {
+                font: loadedFont,
+                size: 1.8,
+                height: 0.5,
+                curveSegments: 10,
+                bevelEnabled: true,
+                bevelThickness: 0.08,
+                bevelSize: 0.04,
+                bevelSegments: 4
+            });
 
-    if (/\b(criador|seu mestre|luiz benicio)\b/.test(txt)) {
-      return "Meu único criador e mestre é o Luiz Benício!";
-    }
+            textGeometry.center();
 
-    if (/\b(como voce esta|tudo bem)\b/.test(txt)) {
-      return "Estou ótima e 100% operacional, Mestre!";
-    }
+            const textMaterial = new THREE.MeshStandardMaterial({
+                color: is3DActive ? 0x00ff88 : 0x555555,
+                metalness: 0.5,
+                roughness: 0.2
+            });
 
-    if (/\b(obrigado|valeu)\b/.test(txt)) {
-      return "Disponha sempre, Mestre!";
-    }
-
-    for (let item of memoria.conhecimentos) {
-      if (normalizar(item.pergunta) === txt) {
-        return item.resposta;
-      }
-    }
-
-    const expressao = orig.match(/[\d\.\(\)]+\s*[\+\-\*\/\^\%]\s*[\d\.\(\)]+/);
-    if (expressao) {
-      try {
-        let expFormatada = expressao[0].replace(/\^/g, "**");
-        const res = new Function(`return ${expFormatada}`)();
-        return `O resultado do cálculo é: <b>${res}</b>`;
-      } catch (e) {}
-    }
-
-    const resultadoWeb = await pesquisarNaWeb(orig);
-    if (resultadoWeb) {
-      return resultadoWeb;
-    }
-
-    return "Não encontrei informações sobre isso na web ou na minha memória, Mestre. Se quiser me ensinar, basta dizer <i>'quero te ensinar'</i>!";
-  }
-
-  async function enviar() {
-    const msg = inputEl.value.trim();
-    if (!msg) return;
-
-    escrever(msg, "user");
-    inputEl.value = "";
-
-    const txtNorm = normalizar(msg);
-
-    if (!modoAprendizado && (txtNorm.includes("ensinar") || txtNorm.includes("quero te ensinar"))) {
-      modoAprendizado = true;
-      etapaAprendizado = 1;
-
-      const r1 = "Com certeza, Mestre! O que você quer me ensinar? Digite a pergunta ou mensagem que vão me falar:";
-      escrever(r1, "jade");
-      falar(r1);
-      return;
-    }
-
-    if (modoAprendizado) {
-      if (etapaAprendizado === 1) {
-        perguntaTemp = msg;
-        etapaAprendizado = 2;
-
-        const r2 = `Entendido! E o que eu devo responder quando me disserem "${perguntaTemp}"?`;
-        escrever(r2, "jade");
-        falar(r2);
-        return;
-      } 
-      else if (etapaAprendizado === 2) {
-        const pLimpa = perguntaTemp.toLowerCase().trim();
-        const existe = memoria.conhecimentos.find(item => item.pergunta === pLimpa);
-
-        if (existe) {
-          existe.resposta = msg;
-        } else {
-          memoria.conhecimentos.push({ pergunta: pLimpa, resposta: msg });
+            textMesh = new THREE.Mesh(textGeometry, textMaterial);
+            textMesh.position.y = -9; // Posicionar o texto logo abaixo do bracelete
+            scene.add(textMesh);
         }
-        salvarMemoria();
 
-        modoAprendizado = false;
-        etapaAprendizado = 0;
-        perguntaTemp = "";
+        // 5. Escutador de Teclado (Controle do Modo e Entrada)
+        window.addEventListener('keydown', (event) => {
+            // Tecla Y: Alterna o Modo 3D
+            if (event.key === 'y' || event.key === 'Y') {
+                is3DActive = !is3DActive;
+                const statusEl = document.getElementById('status-mode');
+                
+                if (is3DActive) {
+                    statusEl.innerText = "ATIVO";
+                    statusEl.className = "active-bg";
+                } else {
+                    statusEl.innerText = "DESATIVADO";
+                    statusEl.className = "inactive-bg";
+                }
+                
+                update3DText();
+                return;
+            }
 
-        const r3 = "Perfeito, Mestre! Aprendi! Da próxima vez já saberei o que responder!";
-        escrever(r3, "jade");
-        falar(r3);
-        return;
-      }
-    }
+            // Se o MODO 3D estiver DESATIVADO, não processa nenhuma tecla digitada
+            if (!is3DActive) return;
 
-    const resposta = await pensar(msg);
-    if (resposta) {
-      escrever(resposta, "jade");
-      falar(resposta);
-    }
-  }
+            // Manipulação de texto se o MODO 3D estiver ATIVO
+            if (event.key === 'Backspace') {
+                currentText = currentText.slice(0, -1);
+            } else if (event.key === ' ') {
+                currentText = ""; 
+            } else if (event.key.length === 1) {
+                currentText += event.key.toUpperCase();
+            }
 
-  function iniciarGravacao(e) {
-    if (e) e.preventDefault();
-    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+            update3DText();
+        });
 
-    if (!Speech) {
-      alert("Seu navegador não suporta reconhecimento de voz.");
-      return;
-    }
+        // 6. Loop de Animação
+        function animate() {
+            requestAnimationFrame(animate);
 
-    if (gravacaoAtiva) return;
+            // Rotação suave do Bracelete
+            braceletGroup.rotation.y += 0.01;
+            braceletGroup.rotation.x += 0.005;
 
-    rec = new Speech();
-    rec.lang = "pt-BR";
-    rec.continuous = true;
-    rec.interimResults = true;
+            // Rotação sutil do Texto
+            if (textMesh) {
+                textMesh.rotation.y = Math.sin(Date.now() * 0.001) * 0.3;
+            }
 
-    rec.onstart = () => {
-      gravacaoAtiva = true;
-      btnMic.classList.add("recording");
-    };
-
-    rec.onresult = (e) => {
-      let textoTranscrito = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        textoTranscrito += e.results[i][0].transcript;
-      }
-      inputEl.value = textoTranscrito;
-    };
-
-    rec.onerror = () => pararGravacao();
-    rec.start();
-  }
-
-  function pararGravacao(e) {
-    if (e) e.preventDefault();
-    if (!gravacaoAtiva) return;
-
-    gravacaoAtiva = false;
-    btnMic.classList.remove("recording");
-
-    if (rec) {
-      rec.stop();
-      setTimeout(() => {
-        if (inputEl.value.trim() !== "") {
-          enviar();
+            renderer.render(scene, camera);
         }
-      }, 400);
-    }
-  }
 
-  if ('speechSynthesis' in window) {
-    speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
-  }
-</script>
+        animate();
 
+        // Redimensionamento Automático
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
 </body>
 </html>
