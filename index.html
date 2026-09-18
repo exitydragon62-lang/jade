@@ -1,277 +1,390 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jade - Sistema 3D</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            overflow: hidden;
-            background-color: #0d0d11;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistente Jade com Modo 3D</title>
+  
+  <!-- Estilos CSS -->
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --accent-color: #06b6d4;
+      --text-color: #f8fafc;
+      --chat-user: #0284c7;
+      --chat-jade: #334155;
+    }
 
-        /* Painel HUD */
-        #hud {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: #ffffff;
-            background: rgba(15, 15, 25, 0.85);
-            backdrop-filter: blur(8px);
-            padding: 18px 24px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-            z-index: 10;
-            pointer-events: none;
-            min-width: 280px;
-        }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
 
-        #status-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
+    #app-container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
 
-        #status-mode {
-            font-weight: 800;
-            font-size: 1.1em;
-            letter-spacing: 1px;
-            padding: 4px 10px;
-            border-radius: 6px;
-        }
+    /* Estúdio 3D Container */
+    #estudio-3d {
+      flex: 1;
+      background-color: #000;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-        .active-bg {
-            background: rgba(0, 255, 136, 0.2);
-            color: #00ff88;
-            border: 1px solid #00ff88;
-        }
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+    }
 
-        .inactive-bg {
-            background: rgba(255, 68, 68, 0.2);
-            color: #ff4444;
-            border: 1px solid #ff4444;
-        }
+    #status-3d {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid var(--accent-color);
+      font-weight: bold;
+    }
 
-        .instructions {
-            font-size: 0.85em;
-            color: #a0a0b0;
-            line-height: 1.6;
-        }
+    /* Chat Container */
+    #chat-container {
+      width: 380px;
+      background-color: var(--card-bg);
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid #334155;
+    }
 
-        .key {
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-    </style>
+    #chat-header {
+      padding: 20px;
+      background-color: #0f172a;
+      border-bottom: 1px solid #334155;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: var(--accent-color);
+    }
 
-    <!-- Libs do Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
+    #chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .msg {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background-color: var(--chat-user);
+      color: #fff;
+    }
+
+    .msg.jade {
+      align-self: flex-start;
+      background-color: var(--chat-jade);
+      color: var(--text-color);
+    }
+
+    #chat-input-area {
+      padding: 15px;
+      display: flex;
+      gap: 8px;
+      border-top: 1px solid #334155;
+      background-color: #0f172a;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background-color: var(--card-bg);
+      color: #fff;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent-color);
+    }
+
+    button {
+      padding: 10px 15px;
+      background-color: var(--accent-color);
+      color: #0f172a;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+  </style>
+
+  <!-- Biblioteca Three.js para o 3D -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="hud">
-        <div id="status-container">
-            <span>MODO 3D:</span>
-            <span id="status-mode" class="active-bg">ATIVO</span>
-        </div>
-        <div class="instructions">
-            • Pressiona <span class="key">Y</span> para Ativar / Desativar o Modo 3D<br>
-            • Pressiona <span class="key">T</span> para gerar/remover o <b>Bracelete Geométrico</b><br>
-            • Com o Modo 3D Ativo: Digita para criar Texto 3D<br>
-            • <span class="key">Backspace</span> Apaga texto | <span class="key">Espaço</span> Limpa texto
-        </div>
+  <div id="app-container">
+    <!-- Area do 3D -->
+    <div id="estudio-3d">
+      <div id="status-3d">Modo 3D: <span id="indicador-modo" style="color: #ef4444;">DESLIGADO</span></div>
+      <div id="canvas-container"></div>
     </div>
 
-    <script>
-        // Estado do Sistema
-        let is3DActive = true;
-        let currentText = "";
-        let textMesh = null;
-        let loadedFont = null;
-        let braceletGroup = null;
+    <!-- Area do Chat -->
+    <div id="chat-container">
+      <div id="chat-header">Jade - Assistente Virtual</div>
+      <div id="chat-messages">
+        <div class="msg jade">Olá! Eu sou a Jade. Como posso te ajudar, Mestre?</div>
+      </div>
+      <div id="chat-input-area">
+        <input type="text" id="user-input" placeholder="Digite ou comande..." onkeydown="if(event.key === 'Enter') enviarMensagem()">
+        <button onclick="enviarMensagem()">Enviar</button>
+      </div>
+    </div>
+  </div>
 
-        // 1. Configuração do Cenário Limpo
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+  <!-- Lógica JavaScript -->
+  <script>
+    // Configurações e Estado Global
+    let modo3DAtivo = false;
+    const memoria = {
+      projetos3D: [],
+      conhecimentos: []
+    };
 
-        // 2. Iluminação
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
+    // Configuração do Three.js
+    let scene, camera, renderer, currentMesh;
 
-        const pointLight1 = new THREE.PointLight(0x00ff88, 2, 80);
-        pointLight1.position.set(15, 20, 15);
-        scene.add(pointLight1);
+    function init3D() {
+      const container = document.getElementById('canvas-container');
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      container.appendChild(renderer.domElement);
 
-        const pointLight2 = new THREE.PointLight(0xffd700, 1.5, 80);
-        pointLight2.position.set(-15, -10, 15);
-        scene.add(pointLight2);
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(5, 5, 5).normalize();
+      scene.add(light);
+      scene.add(new THREE.AmbientLight(0x404040));
 
-        camera.position.set(0, 0, 30);
+      camera.position.z = 5;
 
-        // 3. Função para Alternar o Bracelete Geométrico (Acionada com 'T')
-        function toggleBracelet() {
-            if (braceletGroup) {
-                // Se já existe, remove da tela
-                scene.remove(braceletGroup);
-                braceletGroup = null;
-            } else {
-                // Se não existe, cria e adiciona à tela
-                braceletGroup = new THREE.Group();
-
-                const goldMaterial = new THREE.MeshStandardMaterial({
-                    color: 0xd4af37,
-                    metalness: 0.9,
-                    roughness: 0.15
-                });
-
-                // Anel principal
-                const ringGeometry = new THREE.TorusGeometry(6, 0.6, 16, 100); 
-                const mainRing = new THREE.Mesh(ringGeometry, goldMaterial);
-                braceletGroup.add(mainRing);
-
-                // Fusão com Formas Quadradas/Cúbicas
-                const boxGeometry = new THREE.BoxGeometry(1.2, 1.2, 1.2);
-                for (let i = 0; i < 8; i++) {
-                    const angle = (i / 8) * Math.PI * 2;
-                    const box = new THREE.Mesh(boxGeometry, goldMaterial);
-                    box.position.x = Math.cos(angle) * 6;
-                    box.position.y = Math.sin(angle) * 6;
-                    box.rotation.z = angle;
-                    box.rotation.x = Math.PI / 4;
-                    braceletGroup.add(box);
-                }
-
-                scene.add(braceletGroup);
-            }
+      function animate() {
+        requestAnimationFrame(animate);
+        if (currentMesh) {
+          currentMesh.rotation.x += 0.01;
+          currentMesh.rotation.y += 0.01;
         }
+        renderer.render(scene, camera);
+      }
+      animate();
+    }
 
-        // 4. Carregamento de Fonte
-        const loader = new THREE.FontLoader();
-        loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
-            loadedFont = font;
-        });
+    // Funções do Modo 3D
+    function ativarModo3D() {
+      modo3DAtivo = !modo3DAtivo;
+      const ind = document.getElementById('indicador-modo');
+      if (modo3DAtivo) {
+        ind.textContent = "LIGADO";
+        ind.style.color = "#22c55e";
+        adicionarRespostaJade("Modo 3D **Ativado**, Mestre! Diga o nome de uma forma (bola, cubo, cilindro, cone, pulseira) para eu criar.");
+      } else {
+        ind.textContent = "DESLIGADO";
+        ind.style.color = "#ef4444";
+        adicionarRespostaJade("Modo 3D **Desativado**.");
+      }
+    }
 
-        // Atualizar/Criar o Texto 3D na Tela
-        function update3DText() {
-            if (!loadedFont) return;
+    function interpretarVozPara3D(texto) {
+      const txt = normalizar(texto);
+      let geometry;
 
-            if (textMesh) {
-                scene.remove(textMesh);
-                textMesh.geometry.dispose();
-                textMesh = null;
-            }
+      if (txt.includes("bola") || txt.includes("esfera")) {
+        geometry = new THREE.SphereGeometry(1.5, 32, 32);
+      } else if (txt.includes("cubo") || txt.includes("caixa")) {
+        geometry = new THREE.BoxGeometry(2, 2, 2);
+      } else if (txt.includes("cilindro")) {
+        geometry = new THREE.CylinderGeometry(1, 1, 2, 32);
+      } else if (txt.includes("cone")) {
+        geometry = new THREE.ConeGeometry(1, 2, 32);
+      } else if (txt.includes("pulseira") || txt.includes("toro")) {
+        geometry = new THREE.TorusGeometry(1.2, 0.4, 16, 100);
+      }
 
-            if (currentText.length === 0) return;
+      if (geometry) {
+        if (currentMesh) scene.remove(currentMesh);
+        const material = new THREE.MeshStandardMaterial({ color: 0x06b6d4, wireframe: false });
+        currentMesh = new THREE.Mesh(geometry, material);
+        scene.add(currentMesh);
+        adicionarRespostaJade(`Gerei o objeto 3D correspondente a: <b>${texto}</b>.`);
+        return true;
+      }
+      return false;
+    }
 
-            const textGeometry = new THREE.TextGeometry(currentText, {
-                font: loadedFont,
-                size: 1.8,
-                height: 0.5,
-                curveSegments: 10,
-                bevelEnabled: true,
-                bevelThickness: 0.08,
-                bevelSize: 0.04,
-                bevelSegments: 4
-            });
+    // Utilitários
+    function normalizar(txt) {
+      return txt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
 
-            textGeometry.center();
-
-            const textMaterial = new THREE.MeshStandardMaterial({
-                color: is3DActive ? 0x00ff88 : 0x555555,
-                metalness: 0.5,
-                roughness: 0.2
-            });
-
-            textMesh = new THREE.Mesh(textGeometry, textMaterial);
-            textMesh.position.y = braceletGroup ? -9 : 0; // Ajusta posição se o bracelete estiver ativo
-            scene.add(textMesh);
+    async function pesquisarNaWeb(termo) {
+      try {
+        const resp = await fetch(`https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(termo)}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          return data.extract || null;
         }
+      } catch (e) {
+        return null;
+      }
+      return null;
+    }
 
-        // 5. Escutador do Teclado
-        window.addEventListener('keydown', (event) => {
-            // Tecla Y: Alterna Ativar/Desativar Modo 3D
-            if (event.key === 'y' || event.key === 'Y') {
-                is3DActive = !is3DActive;
-                const statusEl = document.getElementById('status-mode');
-                
-                if (is3DActive) {
-                    statusEl.innerText = "ATIVO";
-                    statusEl.className = "active-bg";
-                } else {
-                    statusEl.innerText = "DESATIVADO";
-                    statusEl.className = "inactive-bg";
-                }
-                
-                update3DText();
-                return;
-            }
+    // Lógica Central do Cérebro da Jade
+    async function pensar(msg) {
+      const orig = msg.trim();
+      const txt = normalizar(orig);
 
-            // Tecla T: Gera/Remove o Bracelete 3D
-            if (event.key === 't' || event.key === 'T') {
-                toggleBracelet();
-                if (textMesh) update3DText(); // Recalcula a posição do texto se ele existir
-                return;
-            }
-
-            // Se o Modo 3D estiver DESATIVADO, não digita nem altera nada
-            if (!is3DActive) return;
-
-            // Digitação do Texto 3D
-            if (event.key === 'Backspace') {
-                currentText = currentText.slice(0, -1);
-            } else if (event.key === ' ') {
-                currentText = ""; 
-            } else if (event.key.length === 1) {
-                currentText += event.key.toUpperCase();
-            }
-
-            update3DText();
-        });
-
-        // 6. Animação
-        function animate() {
-            requestAnimationFrame(animate);
-
-            // Rotação do Bracelete (se estiver acionado)
-            if (braceletGroup) {
-                braceletGroup.rotation.y += 0.01;
-                braceletGroup.rotation.x += 0.005;
-            }
-
-            // Rotação do Texto
-            if (textMesh) {
-                textMesh.rotation.y = Math.sin(Date.now() * 0.001) * 0.3;
-            }
-
-            renderer.render(scene, camera);
+      if (orig.startsWith("/abrir ")) {
+        const urlAlvo = orig.replace("/abrir ", "").trim();
+        if (urlAlvo) {
+          window.open(urlAlvo.startsWith("http") ? urlAlvo : `https://${urlAlvo}`, "_blank");
+          return `Abrindo o site ${urlAlvo}...`;
         }
+      }
 
-        animate();
+      if (txt.includes("01110100") || txt.includes("modo 3d") || txt.includes("ativar modo 3d")) {
+        ativarModo3D();
+        return null;
+      }
 
-        // Redimensionamento da Tela
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+      // MODO 3D ATIVO: Foco Total em Gerar Objetos
+      if (modo3DAtivo) {
+        const processado3D = interpretarVozPara3D(orig);
+        if (processado3D) {
+          return null;
+        } else {
+          return "Mestre, estou no Modo 3D. Diga o nome de uma forma (como bola, cubo, cilindro, cone ou pulseira) para eu criar no estúdio!";
+        }
+      }
+
+      // MODO NORMAL (Modo 3D Desligado): Explicações e buscas
+      if (txt.includes("listar projetos") || txt.includes("ver projetos 3d")) {
+        if (!memoria.projetos3D || memoria.projetos3D.length === 0) {
+          return "Você não tem nenhum projeto 3D salvo na memória, Mestre!";
+        }
+        let lista = "Seus projetos 3D salvos, Mestre:<br>";
+        memoria.projetos3D.forEach((p, idx) => {
+          lista += `<br>${idx + 1}. <b>${p.nome}</b> (${p.data}) - ${p.objetos.length} objeto(s)`;
         });
-    </script>
+        return lista;
+      }
+
+      if (/\b(quem e voce|qual seu nome)\b/.test(txt)) {
+        return "Eu sou a Jade, sua assistente virtual pessoal! Criada para te auxiliar em pesquisas, comandos, navegação e gerenciamento de projetos 3D.";
+      }
+
+      if (/\b(criador|seu mestre|luiz benicio)\b/.test(txt)) {
+        return "Meu único criador e mestre é o Luiz Benício!";
+      }
+
+      if (/\b(como voce esta|tudo bem)\b/.test(txt)) {
+        return "Estou ótima e 100% operacional, Mestre!";
+      }
+
+      if (/\b(obrigado|valeu)\b/.test(txt)) {
+        return "Disponha sempre, Mestre!";
+      }
+
+      for (let item of memoria.conhecimentos) {
+        if (normalizar(item.pergunta) === txt) {
+          return item.resposta;
+        }
+      }
+
+      const expressao = orig.match(/[\d\.\(\)]+\s*[\+\-\*\/\^\%]\s*[\d\.\(\)]+/);
+      if (expressao) {
+        try {
+          let expFormatada = expressao[0].replace(/\^/g, "**");
+          const res = new Function(`return ${expFormatada}`)();
+          return `O resultado do cálculo é: <b>${res}</b>`;
+        } catch (e) {}
+      }
+
+      const resultadoWeb = await pesquisarNaWeb(orig);
+      if (resultadoWeb) {
+        return resultadoWeb;
+      }
+
+      return "Não encontrei informações sobre isso na web ou na minha memória, Mestre.";
+    }
+
+    // Manipulação da Interface do Chat
+    async function enviarMensagem() {
+      const input = document.getElementById('user-input');
+      const texto = input.value.trim();
+      if (!texto) return;
+
+      adicionarMensagem(texto, 'user');
+      input.value = '';
+
+      const resposta = await pensar(texto);
+      if (resposta) {
+        adicionarRespostaJade(resposta);
+      }
+    }
+
+    function adicionarMensagem(texto, tipo) {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = `msg ${tipo}`;
+      div.innerHTML = texto;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function adicionarRespostaJade(texto) {
+      adicionarMensagem(texto, 'jade');
+    }
+
+    // Atalho de teclado: pressionar tecla 't' ativa/desativa modo 3D
+    window.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 't' && document.activeElement.tagName !== 'INPUT') {
+        ativarModo3D();
+      }
+    });
+
+    // Inicialização ao carregar
+    window.onload = () => {
+      init3D();
+    };
+  </script>
 </body>
 </html>
