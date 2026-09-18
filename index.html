@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Assistente Jade com Modo 3D</title>
   
-  <!-- Estilos CSS -->
   <style>
     :root {
-      --bg-color: #0f172a;
-      --card-bg: #1e293b;
-      --accent-color: #06b6d4;
+      --bg-color: #0b0712;
+      --card-bg: #161024;
+      --accent-color: #9d4edd;
+      --accent-hover: #7b2cbf;
       --text-color: #f8fafc;
-      --chat-user: #0284c7;
-      --chat-jade: #334155;
+      --chat-user: #6a040f;
+      --chat-jade: #241442;
     }
 
     body {
@@ -36,7 +36,7 @@
     /* Estúdio 3D Container */
     #estudio-3d {
       flex: 1;
-      background-color: #000;
+      background-color: #05030a;
       position: relative;
       display: flex;
       justify-content: center;
@@ -52,11 +52,12 @@
       position: absolute;
       top: 20px;
       left: 20px;
-      background: rgba(15, 23, 42, 0.8);
+      background: rgba(22, 16, 36, 0.85);
       padding: 10px 15px;
       border-radius: 8px;
       border: 1px solid var(--accent-color);
       font-weight: bold;
+      z-index: 10;
     }
 
     /* Chat Container */
@@ -65,13 +66,13 @@
       background-color: var(--card-bg);
       display: flex;
       flex-direction: column;
-      border-left: 1px solid #334155;
+      border-left: 1px solid #2e1c4d;
     }
 
     #chat-header {
       padding: 20px;
-      background-color: #0f172a;
-      border-bottom: 1px solid #334155;
+      background-color: #0b0712;
+      border-bottom: 1px solid #2e1c4d;
       font-size: 1.2rem;
       font-weight: bold;
       color: var(--accent-color);
@@ -96,7 +97,7 @@
 
     .msg.user {
       align-self: flex-end;
-      background-color: var(--chat-user);
+      background-color: var(--accent-hover);
       color: #fff;
     }
 
@@ -104,21 +105,22 @@
       align-self: flex-start;
       background-color: var(--chat-jade);
       color: var(--text-color);
+      border: 1px solid #3c236e;
     }
 
     #chat-input-area {
       padding: 15px;
       display: flex;
       gap: 8px;
-      border-top: 1px solid #334155;
-      background-color: #0f172a;
+      border-top: 1px solid #2e1c4d;
+      background-color: #0b0712;
     }
 
     input[type="text"] {
       flex: 1;
       padding: 10px;
       border-radius: 6px;
-      border: 1px solid #334155;
+      border: 1px solid #2e1c4d;
       background-color: var(--card-bg);
       color: #fff;
       outline: none;
@@ -131,7 +133,7 @@
     button {
       padding: 10px 15px;
       background-color: var(--accent-color);
-      color: #0f172a;
+      color: #fff;
       border: none;
       border-radius: 6px;
       font-weight: bold;
@@ -139,7 +141,7 @@
     }
 
     button:hover {
-      opacity: 0.9;
+      background-color: var(--accent-hover);
     }
   </style>
 
@@ -149,26 +151,25 @@
 <body>
 
   <div id="app-container">
-    <!-- Area do 3D -->
+    <!-- Ária do 3D -->
     <div id="estudio-3d">
       <div id="status-3d">Modo 3D: <span id="indicador-modo" style="color: #ef4444;">DESLIGADO</span></div>
       <div id="canvas-container"></div>
     </div>
 
-    <!-- Area do Chat -->
+    <!-- Área do Chat -->
     <div id="chat-container">
       <div id="chat-header">Jade - Assistente Virtual</div>
       <div id="chat-messages">
         <div class="msg jade">Olá! Eu sou a Jade. Como posso te ajudar, Mestre?</div>
       </div>
       <div id="chat-input-area">
-        <input type="text" id="user-input" placeholder="Digite ou comande..." onkeydown="if(event.key === 'Enter') enviarMensagem()">
+        <input type="text" id="user-input" placeholder="Digite, aperte 'C' para falar ou 'T' para o Modo 3D..." onkeydown="if(event.key === 'Enter') enviarMensagem()">
         <button onclick="enviarMensagem()">Enviar</button>
       </div>
     </div>
   </div>
 
-  <!-- Lógica JavaScript -->
   <script>
     // Configurações e Estado Global
     let modo3DAtivo = false;
@@ -176,6 +177,51 @@
       projetos3D: [],
       conhecimentos: []
     };
+
+    // Configuração de Síntese e Reconhecimento de Voz
+    const synth = window.speechSynthesis;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'pt-BR';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onresult = (event) => {
+        const comandoVoz = event.results[0][0].transcript;
+        document.getElementById('user-input').value = comandoVoz;
+        enviarMensagem();
+      };
+
+      recognition.onerror = (e) => {
+        console.error("Erro no reconhecimento de voz:", e);
+      };
+    }
+
+    // Função para a Jade Falar tudo que responde/escreve
+    function falar(texto) {
+      if (!synth) return;
+      synth.cancel(); // Cancela falas anteriores
+      const textoLimpo = texto.replace(/<[^>]*>/g, ''); // Remove tags HTML antes de falar
+      const utterance = new SpeechSynthesisUtterance(textoLimpo);
+      utterance.lang = 'pt-BR';
+      utterance.rate = 1.1;
+      synth.speak(utterance);
+    }
+
+    function ouvirVoz() {
+      if (recognition) {
+        try {
+          recognition.start();
+        } catch (e) {
+          recognition.stop();
+        }
+      } else {
+        alert("Navegador não suporta Reconhecimento de Voz.");
+      }
+    }
 
     // Configuração do Three.js
     let scene, camera, renderer, currentMesh;
@@ -192,7 +238,7 @@
       const light = new THREE.DirectionalLight(0xffffff, 1);
       light.position.set(5, 5, 5).normalize();
       scene.add(light);
-      scene.add(new THREE.AmbientLight(0x404040));
+      scene.add(new THREE.AmbientLight(0x555555));
 
       camera.position.z = 5;
 
@@ -214,11 +260,11 @@
       if (modo3DAtivo) {
         ind.textContent = "LIGADO";
         ind.style.color = "#22c55e";
-        adicionarRespostaJade("Modo 3D **Ativado**, Mestre! Diga o nome de uma forma (bola, cubo, cilindro, cone, pulseira) para eu criar.");
+        adicionarRespostaJade("Modo 3D Ativado, Mestre! Diga o nome de uma forma como bola, cubo, cilindro, cone ou pulseira para eu criar.");
       } else {
         ind.textContent = "DESLIGADO";
         ind.style.color = "#ef4444";
-        adicionarRespostaJade("Modo 3D **Desativado**.");
+        adicionarRespostaJade("Modo 3D Desativado.");
       }
     }
 
@@ -240,10 +286,10 @@
 
       if (geometry) {
         if (currentMesh) scene.remove(currentMesh);
-        const material = new THREE.MeshStandardMaterial({ color: 0x06b6d4, wireframe: false });
+        const material = new THREE.MeshStandardMaterial({ color: 0x9d4edd, wireframe: false });
         currentMesh = new THREE.Mesh(geometry, material);
         scene.add(currentMesh);
-        adicionarRespostaJade(`Gerei o objeto 3D correspondente a: <b>${texto}</b>.`);
+        adicionarRespostaJade(`Gerei o objeto 3D correspondente a: ${texto}.`);
         return true;
       }
       return false;
@@ -267,7 +313,7 @@
       return null;
     }
 
-    // Lógica Central do Cérebro da Jade
+    // Lógica Central da Jade
     async function pensar(msg) {
       const orig = msg.trim();
       const txt = normalizar(orig);
@@ -285,17 +331,17 @@
         return null;
       }
 
-      // MODO 3D ATIVO: Foco Total em Gerar Objetos
+      // MODO 3D ATIVO
       if (modo3DAtivo) {
         const processado3D = interpretarVozPara3D(orig);
         if (processado3D) {
           return null;
         } else {
-          return "Mestre, estou no Modo 3D. Diga o nome de uma forma (como bola, cubo, cilindro, cone ou pulseira) para eu criar no estúdio!";
+          return "Mestre, estou no Modo 3D. Diga o nome de uma forma para eu criar no estúdio!";
         }
       }
 
-      // MODO NORMAL (Modo 3D Desligado): Explicações e buscas
+      // MODO NORMAL (Pesquisas, respostas conceituais)
       if (txt.includes("listar projetos") || txt.includes("ver projetos 3d")) {
         if (!memoria.projetos3D || memoria.projetos3D.length === 0) {
           return "Você não tem nenhum projeto 3D salvo na memória, Mestre!";
@@ -334,7 +380,7 @@
         try {
           let expFormatada = expressao[0].replace(/\^/g, "**");
           const res = new Function(`return ${expFormatada}`)();
-          return `O resultado do cálculo é: <b>${res}</b>`;
+          return `O resultado do cálculo é: ${res}`;
         } catch (e) {}
       }
 
@@ -372,16 +418,23 @@
 
     function adicionarRespostaJade(texto) {
       adicionarMensagem(texto, 'jade');
+      falar(texto); // Falar a resposta gerada
     }
 
-    // Atalho de teclado: pressionar tecla 't' ativa/desativa modo 3D
+    // Atribuição de Atalhos pelo Teclado ('C' para falar, 'T' para Modo 3D)
     window.addEventListener('keydown', (e) => {
-      if (e.key.toLowerCase() === 't' && document.activeElement.tagName !== 'INPUT') {
-        ativarModo3D();
+      if (document.activeElement.tagName !== 'INPUT') {
+        const tecla = e.key.toLowerCase();
+        if (tecla === 'c') {
+          e.preventDefault();
+          ouvirVoz();
+        } else if (tecla === 't') {
+          e.preventDefault();
+          ativarModo3D();
+        }
       }
     });
 
-    // Inicialização ao carregar
     window.onload = () => {
       init3D();
     };
