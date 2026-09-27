@@ -58,14 +58,27 @@
       font-weight: 500;
     }
 
-    .api-key-container {
+    .header-row {
       display: flex;
-      gap: 8px;
+      justify-content: center;
+      align-items: flex-start;
+      position: relative;
     }
 
-    .api-key-container input {
-      font-size: 11px !important;
-      padding: 6px 10px !important;
+    .btn-config {
+      position: absolute;
+      right: 0;
+      top: 0;
+      background: transparent;
+      color: #6e6e8d;
+      font-size: 16px;
+      padding: 4px 8px;
+      border-radius: 8px;
+    }
+
+    .btn-config:hover {
+      background: #251638;
+      color: #b366ff;
     }
 
     #chat {
@@ -267,15 +280,12 @@
 <body>
 
   <div class="app">
-    <div class="header">
-      <h1>Jade IA</h1>
-      <div class="subtitle">Criada por Luiz Benício</div>
-    </div>
-
-    <!-- Configuração de API Key -->
-    <div class="api-key-container">
-      <input id="apiKey" type="password" placeholder="Cole sua Gemini API Key aqui..." autocomplete="off">
-      <button onclick="salvarApiKey()">Salvar Key</button>
+    <div class="header-row">
+      <div class="header">
+        <h1>Jade IA</h1>
+        <div class="subtitle">Criada por Luiz Benício</div>
+      </div>
+      <button class="btn-config" onclick="alterarApiKey()" title="Configurar chave de API">⚙</button>
     </div>
 
     <!-- Estúdio de Projetos 3D -->
@@ -354,14 +364,29 @@
   const chatEl = document.getElementById("chat");
   const btnMic = document.getElementById("btnOuvir");
   const btnEnviar = document.getElementById("btnEnviar");
-  const apiKeyEl = document.getElementById("apiKey");
 
-  if (geminiApiKey) apiKeyEl.value = geminiApiKey;
+  // Pergunta a chave apenas uma vez (se ainda não tiver nenhuma salva) e nunca mais incomoda
+  function pedirApiKey(mensagemInicial) {
+    const valor = window.prompt(mensagemInicial || "Cole sua Gemini API Key para ativar a Jade, Mestre:", "");
+    if (valor && valor.trim()) {
+      geminiApiKey = valor.trim();
+      localStorage.setItem("jade_gemini_key", geminiApiKey);
+      return true;
+    }
+    return false;
+  }
 
-  function salvarApiKey() {
-    geminiApiKey = apiKeyEl.value.trim();
-    localStorage.setItem("jade_gemini_key", geminiApiKey);
-    escrever("Chave de API salva com sucesso, Mestre!", "jade");
+  // Acessível pelo botão de engrenagem discreto, caso precise trocar a chave depois
+  function alterarApiKey() {
+    const ok = pedirApiKey("Cole a nova Gemini API Key, Mestre (deixe em branco para cancelar):");
+    if (ok) {
+      escrever("Chave de API atualizada com sucesso, Mestre!", "jade");
+    }
+  }
+
+  if (!geminiApiKey) {
+    // Só pergunta na primeira vez que a Jade é aberta neste navegador
+    setTimeout(() => pedirApiKey(), 300);
   }
 
   inputEl.addEventListener("keydown", (e) => {
@@ -369,7 +394,7 @@
   });
 
   window.addEventListener("keydown", (e) => {
-    if (document.activeElement === inputEl || document.activeElement === apiKeyEl) return;
+    if (document.activeElement === inputEl) return;
 
     if ((e.key === "c" || e.key === "C") && !gravacaoAtiva) {
       iniciarGravacao();
@@ -817,7 +842,10 @@ ${clima}`;
   // --- MOTOR DE IA GEMINI + PROCESSAMENTO DE CONTEXTO ---
   async function chamarGeminiAPI(mensagemUsuario) {
     if (!geminiApiKey) {
-      return "Mestre, por favor insira sua API Key do Gemini no campo acima para que eu possa ativar minha inteligência máxima!";
+      const ok = pedirApiKey();
+      if (!ok) {
+        return "Mestre, preciso da sua API Key do Gemini para ativar minha inteligência máxima. Clique na engrenagem (⚙) quando quiser inserir.";
+      }
     }
 
     const agora = new Date();
@@ -878,7 +906,7 @@ Mantenha respostas claras, diretas, elegantes e fluidas — nem curtas demais ne
 
       if (!response.ok) {
         if (response.status === 400 || response.status === 403) {
-          return "Mestre, sua API Key parece inválida ou sem permissão. Verifique a chave inserida acima.";
+          return "Mestre, sua API Key parece inválida ou sem permissão. Clique na engrenagem (⚙) para atualizá-la.";
         }
         if (response.status === 429) {
           return "Mestre, atingimos o limite de requisições no momento. Aguarde alguns instantes e tente novamente.";
@@ -1044,4 +1072,5 @@ Mantenha respostas claras, diretas, elegantes e fluidas — nem curtas demais ne
 
 </body>
 </html>
+
 
