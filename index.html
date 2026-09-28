@@ -1,914 +1,742 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jade IA - Completa com Modo 3D Interativo</title>
-  
-  <!-- Three.js para renderização 3D -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- OrbitControls para Zoom (Pinça), Pan e Rotação 3D -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      background: #0d0814;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      padding: 15px;
-      color: #ffffff;
-    }
-
-    .app {
-      width: 100%;
-      max-width: 550px;
-      background: #181124;
-      padding: 20px;
-      border-radius: 20px;
-      border: 1px solid #3b235d;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(138, 43, 226, 0.2);
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    .header {
-      text-align: center;
-    }
-
-    h1 {
-      color: #b366ff;
-      margin: 0;
-      font-size: 26px;
-      text-shadow: 0 0 8px rgba(179, 102, 255, 0.4);
-    }
-
-    .subtitle {
-      color: #a0a0b0;
-      font-size: 13px;
-      margin-top: 4px;
-      font-weight: 500;
-    }
-
-    #chat {
-      background: #09050e;
-      height: 380px;
-      overflow-y: auto;
-      padding: 15px;
-      border-radius: 14px;
-      border: 1px solid #2a1942;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
-    }
-
-    .msg {
-      max-width: 90%;
-      padding: 10px 14px;
-      border-radius: 15px;
-      font-size: 14px;
-      line-height: 1.4;
-      word-wrap: break-word;
-    }
-
-    .msg-jade {
-      align-self: flex-start;
-      background: #251638;
-      color: #f0e6ff;
-      border-bottom-left-radius: 2px;
-      border: 1px solid #4c287a;
-    }
-
-    .msg-user {
-      align-self: flex-end;
-      background: #7928ca;
-      color: #ffffff;
-      border-bottom-right-radius: 2px;
-    }
-
-    /* Painel do Estúdio 3D */
-    #container-3d {
-      display: none;
-      background: #05020a;
-      border: 1px solid #7928ca;
-      border-radius: 14px;
-      padding: 10px;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    #canvas-3d {
-      width: 100%;
-      height: 250px;
-      border-radius: 10px;
-      background: #000;
-      touch-action: none;
-    }
-
-    .controles-3d {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .controles-3d select, .controles-3d input, .controles-3d button {
-      background: #181124;
-      border: 1px solid #3b235d;
-      color: #fff;
-      padding: 6px;
-      border-radius: 8px;
-      font-size: 12px;
-    }
-
-    .checkbox-container {
-      grid-column: span 2;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: #00ffcc;
-    }
-
-    .input-box {
-      display: flex;
-      gap: 8px;
-    }
-
-    input[type="text"] {
-      flex: 1;
-      padding: 12px 15px;
-      background: #09050e;
-      border: 1px solid #3b235d;
-      border-radius: 12px;
-      outline: none;
-      font-size: 14px;
-      color: #ffffff;
-    }
-
-    input[type="text"]:focus {
-      border-color: #9d4edf;
-      box-shadow: 0 0 8px rgba(157, 78, 223, 0.4);
-    }
-
-    button {
-      padding: 12px 15px;
-      border: 0;
-      border-radius: 12px;
-      background: #7928ca;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-    }
-
-    button:hover {
-      background: #9d4edf;
-    }
-
-    button:active {
-      transform: scale(0.95);
-    }
-
-    .btn-mic {
-      background: #4c287a;
-      user-select: none;
-    }
-
-    .btn-mic.recording {
-      background: #ff2a6d;
-      animation: pulse 1s infinite;
-    }
-
-    .footer-actions {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .shortcut-hint {
-      font-size: 11px;
-      color: #6e6e8d;
-    }
-
-    .btn-clear {
-      background: transparent;
-      color: #a0a0b0;
-      font-size: 11px;
-      padding: 0;
-      text-decoration: underline;
-      cursor: pointer;
-    }
-
-    .btn-clear:hover {
-      color: #ff4d4d;
-    }
-
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
-      100% { opacity: 1; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jade IA 2.0</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+*{box-sizing:border-box}
+body{background:#0d0814;font-family:'Segoe UI',Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;padding:15px;color:#fff}
+.app{width:100%;max-width:550px;background:#181124;padding:20px;border-radius:20px;border:1px solid #3b235d;box-shadow:0 10px 30px rgba(0,0,0,.8),0 0 15px rgba(138,43,226,.2);display:flex;flex-direction:column;gap:15px}
+.header{text-align:center}
+h1{color:#b366ff;margin:0;font-size:26px;text-shadow:0 0 8px rgba(179,102,255,.4)}
+.subtitle{color:#a0a0b0;font-size:13px;margin-top:4px;font-weight:500}
+#chat{background:#09050e;height:380px;overflow-y:auto;padding:15px;border-radius:14px;border:1px solid #2a1942;display:flex;flex-direction:column;gap:12px;box-shadow:inset 0 2px 6px rgba(0,0,0,.6)}
+.msg{max-width:90%;padding:10px 14px;border-radius:15px;font-size:14px;line-height:1.45;word-wrap:break-word}
+.msg-jade{align-self:flex-start;background:#251638;color:#f0e6ff;border-bottom-left-radius:2px;border:1px solid #4c287a}
+.msg-user{align-self:flex-end;background:#7928ca;color:#fff;border-bottom-right-radius:2px}
+.digitando{opacity:.7;font-style:italic}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:#181124;border:1px solid #3b235d;color:#c9a8ff;padding:5px 10px;border-radius:14px;font-size:11px;cursor:pointer}
+.chip:hover{background:#251638}
+#container-3d{display:none;background:#05020a;border:1px solid #7928ca;border-radius:14px;padding:10px;flex-direction:column;gap:10px}
+#canvas-3d{width:100%;height:250px;border-radius:10px;background:#000;touch-action:none}
+.controles-3d{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.controles-3d select,.controles-3d input,.controles-3d button{background:#181124;border:1px solid #3b235d;color:#fff;padding:6px;border-radius:8px;font-size:12px}
+.checkbox-container{grid-column:span 2;display:flex;align-items:center;gap:8px;font-size:12px;color:#0fc}
+.input-box{display:flex;gap:8px}
+input[type="text"]{flex:1;min-width:0;padding:12px 15px;background:#09050e;border:1px solid #3b235d;border-radius:12px;outline:none;font-size:14px;color:#fff}
+input[type="text"]:focus{border-color:#9d4edf;box-shadow:0 0 8px rgba(157,78,223,.4)}
+button{padding:12px 15px;border:0;border-radius:12px;background:#7928ca;color:#fff;font-weight:bold;cursor:pointer;transition:background .2s,transform .1s}
+button:hover{background:#9d4edf}
+button:active{transform:scale(.95)}
+.btn-mic{background:#4c287a;user-select:none}
+.btn-mic.recording{background:#ff2a6d;animation:pulse 1s infinite}
+.footer-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.shortcut-hint{font-size:11px;color:#6e6e8d}
+.btn-clear{background:transparent;color:#a0a0b0;font-size:11px;padding:0;text-decoration:underline}
+.btn-clear:hover{color:#ff4d4d;background:transparent}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+</style>
 </head>
 <body>
+<div class="app">
+  <div class="header">
+    <h1>Jade IA</h1>
+    <div class="subtitle">Criada por Luiz Benicio</div>
+  </div>
 
-  <div class="app">
-    <div class="header">
-      <h1>Jade IA</h1>
-      <div class="subtitle">Criada por Luiz Benicio</div>
-    </div>
+  <div id="container-3d">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;font-weight:bold;color:#b366ff;">Modo 01110100 - Visualizador 3D</span>
+      <button style="padding:2px 8px;font-size:10px;" onclick="fecharModo3D()">Fechar 3D</button>
+    </div>
+    <div id="canvas-3d"></div>
+    <div class="controles-3d">
+      <select id="selectForma">
+        <option value="torus">Pulseira / Torus (Anel)</option>
+        <option value="cube">Cubo / Bloco</option>
+        <option value="sphere">Esfera / Bola</option>
+        <option value="cylinder">Cilindro / Tubo</option>
+        <option value="cone">Cone / Pirâmide</option>
+        <option value="tetrahedron">Tetraedro (4 Faces)</option>
+        <option value="octahedron">Octaedro (8 Faces)</option>
+        <option value="dodecahedron">Dodecaedro (12 Faces)</option>
+        <option value="icosahedron">Icosaedro (20 Faces)</option>
+        <option value="plane">Plano / Superfície</option>
+        <option value="ring">Anel / Disco Vazado</option>
+      </select>
+      <select id="selectMaterial">
+        <option value="phong">Brilhante (Padrão)</option>
+        <option value="standard">Metálico</option>
+        <option value="glass">Vidro / Reflexivo</option>
+      </select>
+      <input type="color" id="corObjeto" value="#b366ff">
+      <button onclick="adicionarForma3DManual()">Adicionar Forma</button>
+      <div class="checkbox-container">
+        <input type="checkbox" id="chkMesclar">
+        <label for="chkMesclar">Mesclar com o projeto atual</label>
+      </div>
+      <button onclick="limparCena3D()" style="background:#4c287a;">Limpar Cenas</button>
+      <button onclick="salvarProjeto3D()" style="background:#00b386;">Salvar Projeto</button>
+    </div>
+  </div>
 
-    <!-- Estúdio de Projetos 3D -->
-    <div id="container-3d">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size: 13px; font-weight: bold; color: #b366ff;">Modo 01110100 - Visualizador 3D</span>
-        <button style="padding: 2px 8px; font-size: 10px;" onclick="fecharModo3D()">Fechar 3D</button>
-      </div>
-      <div id="canvas-3d"></div>
-      <div class="controles-3d">
-        <select id="selectForma">
-          <option value="torus">Pulseira / Torus (Anel)</option>
-          <option value="cube">Cubo / Bloco</option>
-          <option value="sphere">Esfera / Bola</option>
-          <option value="cylinder">Cilindro / Tubo</option>
-          <option value="cone">Cone / Pirâmide</option>
-          <!-- Novas Formas para Melhor Desempenho e Variedade -->
-          <option value="tetrahedron">Tetraedro (4 Faces - Ultra Leve)</option>
-          <option value="octahedron">Octaedro (8 Faces - Leve)</option>
-          <option value="dodecahedron">Dodecaedro (12 Faces)</option>
-          <option value="icosahedron">Icosaedro (20 Faces)</option>
-          <option value="plane">Plano / Superfície</option>
-          <option value="ring">Anel / Disco Vazado</option>
-        </select>
-        <select id="selectMaterial">
-          <option value="phong">Brilhante (Padrão)</option>
-          <option value="standard">Metálico</option>
-          <option value="glass">Vidro / Reflexivo</option>
-        </select>
-        <input type="color" id="corObjeto" value="#b366ff">
-        <button onclick="adicionarForma3DManual()">Adicionar Forma</button>
-        <div class="checkbox-container">
-          <input type="checkbox" id="chkMesclar">
-          <label for="chkMesclar">Mesclar com o projeto atual</label>
-        </div>
-        <button onclick="limparCena3D()" style="background:#4c287a;">Limpar Cenas</button>
-        <button onclick="salvarProjeto3D()" style="background:#00b386;">Salvar Projeto</button>
-      </div>
-    </div>
+  <div id="chat"></div>
+  <div class="chips" id="chips"></div>
 
-    <div id="chat">
-      <div class="msg msg-jade">
-        <b>Jade:</b> Olá, Mestre! Eu sou a Jade.<br>
-        • Pressione <b>V</b> para dados do ambiente.<br>
-        • Pressione <b>M</b> para abrir qualquer site.<br>
-        • Pressione <b>T</b> para ativar o Modo 3D (ou diga <i>01110100</i>).<br>
-        • Pressione <b>N</b> para voltar ao foco no chat.<br>
-        • Segure <b>C</b> para falar.
-      </div>
-    </div>
+  <div class="input-box">
+    <input id="mensagem" type="text" placeholder="Converse, peça um comando ou use atalhos..." autocomplete="off">
+    <button onclick="enviar()">Enviar</button>
+    <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">Falar</button>
+  </div>
 
-    <div class="input-box">
-      <input id="mensagem" type="text" placeholder="Digite, peça um comando ou use atalhos..." autocomplete="off">
-      <button onclick="enviar()">Enviar</button>
-      <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">Falar</button>
-    </div>
-
-    <div class="footer-actions">
-      <span class="shortcut-hint">Atalhos: <b>C</b> falar | <b>V</b> status | <b>M</b> site | <b>T</b> modo 3D | <b>N</b> voltar</span>
-      <button class="btn-clear" onclick="limparMemoria()">Resetar aprendizado</button>
-    </div>
-  </div>
+  <div class="footer-actions">
+    <span class="shortcut-hint"><b>C</b> falar | <b>V</b> status | <b>M</b> site | <b>T</b> 3D | <b>N</b> voltar</span>
+    <span>
+      <button class="btn-clear" id="btnVoz" onclick="alternarVoz()">Voz: ligada</button> &nbsp;
+      <button class="btn-clear" onclick="limparMemoria()">Resetar aprendizado</button>
+    </span>
+  </div>
+</div>
 
 <script>
-  let memoria = JSON.parse(localStorage.getItem("jade_memoria")) || { conhecimentos: [], tarefas: [], projetos3D: [] };
-  let modoAprendizado = false;
-  let etapaAprendizado = 0;
-  let perguntaTemp = "";
-  let gravacaoAtiva = false;
-  let rec = null;
-
-  // Variáveis do Three.js e OrbitControls
-  let modo3DAtivo = false;
-  let scene3D, camera3D, renderer3D, grupoProjeto3D, controls3D;
-  let animId3D = null;
-
-  const inputEl = document.getElementById("mensagem");
-  const chatEl = document.getElementById("chat");
-  const btnMic = document.getElementById("btnOuvir");
-
-  inputEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") enviar();
-  });
-
-  window.addEventListener("keydown", (e) => {
-    if (document.activeElement === inputEl) return;
-
-    if ((e.key === "c" || e.key === "C") && !gravacaoAtiva) {
-      iniciarGravacao();
-    }
-
-    if (e.key === "v" || e.key === "V") {
-      gerarRelatorioMestre();
-    }
-
-    if (e.key === "m" || e.key === "M") {
-      e.preventDefault();
-      prepararAberturaSite();
-    }
-
-    if (e.key === "t" || e.key === "T") {
-      e.preventDefault();
-      ativarModo3D();
-    }
-
-    if (e.key === "n" || e.key === "N") {
-      e.preventDefault();
-      voltarParaJade();
-    }
-  });
-
-  window.addEventListener("keyup", (e) => {
-    if ((e.key === "c" || e.key === "C") && gravacaoAtiva) {
-      pararGravacao();
-    }
-  });
-
-  function salvarMemoria() {
-    localStorage.setItem("jade_memoria", JSON.stringify(memoria));
-  }
-
-  function limparMemoria() {
-    if (confirm("Mestre, deseja apagar todo o aprendizado, tarefas e projetos 3D salvos?")) {
-      memoria.conhecimentos = [];
-      memoria.tarefas = [];
-      memoria.projetos3D = [];
-      salvarMemoria();
-      escrever("Toda a minha memória de aprendizado e projetos foi limpa, Mestre!", "jade");
-    }
-  }
-
-  function falar(texto) {
-    if (!('speechSynthesis' in window)) return;
-    let textoLimpo = texto.replace(/<[^>]*>?/gm, '');
-    if (textoLimpo.length > 200) {
-      textoLimpo = textoLimpo.substring(0, 200) + "... O restante está exibido no chat, Mestre!";
-    }
-    
-    speechSynthesis.cancel();
-    const voz = new SpeechSynthesisUtterance(textoLimpo);
-    voz.lang = "pt-BR";
-    voz.pitch = 1.2;
-    voz.rate = 1.0;
-
-    const voces = speechSynthesis.getVoices();
-    const vozFeminina = voces.find(v => v.lang.includes("pt") && (v.name.includes("Luciana") || v.name.includes("Yelda") || v.name.includes("Google português do Brasil") || v.name.includes("Maria") || v.name.includes("Helena")));
-    
-    if (vozFeminina) voz.voice = vozFeminina;
-
-    speechSynthesis.speak(voz);
-  }
-
-  function escrever(texto, remetente) {
-    const div = document.createElement("div");
-    div.classList.add("msg");
-    
-    if (remetente === "user") {
-      div.classList.add("msg-user");
-      div.innerHTML = `<b>Mestre:</b> ${texto}`;
-    } else {
-      div.classList.add("msg-jade");
-      div.innerHTML = `<b>Jade:</b> ${texto}`;
-    }
-
-    chatEl.appendChild(div);
-    chatEl.scrollTop = chatEl.scrollHeight;
-    return div;
-  }
-
-  function normalizar(txt) {
-    return txt.toLowerCase()
-              .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-              .replace(/(.)\1+/g, '$1')
-              .replace(/[?!=.,;]/g, ' ')
-              .trim();
-  }
-
-  // --- MÓDULO 3D (THREE.JS + ORBIT CONTROLS) ---
-  function inicializarCena3D() {
-    const container = document.getElementById("canvas-3d");
-    container.innerHTML = "";
-
-    scene3D = new THREE.Scene();
-    camera3D = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera3D.position.set(0, 0, 5);
-
-    renderer3D = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer3D.setSize(container.clientWidth, container.clientHeight);
-    renderer3D.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer3D.domElement);
-
-    // Configuração dos controles de Pinça / Rotação / Zoom
-    controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
-    controls3D.enableDamping = true;
-    controls3D.dampingFactor = 0.05;
-    controls3D.enableZoom = true;
-    controls3D.enableRotate = true;
-    controls3D.touches = {
-      ONE: THREE.TOUCH.ROTATE,
-      TWO: THREE.TOUCH.DOLLY_PAN
-    };
-
-    const luzLado = new THREE.DirectionalLight(0xffffff, 1);
-    luzLado.position.set(5, 5, 5).normalize();
-    scene3D.add(luzLado);
-
-    const luzAmbiente = new THREE.AmbientLight(0x404040, 1.5);
-    scene3D.add(luzAmbiente);
-
-    grupoProjeto3D = new THREE.Group();
-    scene3D.add(grupoProjeto3D);
-
-    function renderizarLoop() {
-      animId3D = requestAnimationFrame(renderizarLoop);
-      if (controls3D) controls3D.update();
-      renderer3D.render(scene3D, camera3D);
-    }
-    renderizarLoop();
-  }
-
-  function ativarModo3D() {
-    modo3DAtivo = true;
-    document.getElementById("container-3d").style.display = "flex";
-    inicializarCena3D();
-    
-    escrever("[Modo 01110100] Estúdio 3D ativado, Mestre! Use gestos de pinça para zoom ou arraste para girar a estrutura.", "jade");
-    falar("Modo 3D de projetos ativado, Mestre!");
-  }
-
-  function fecharModo3D() {
-    modo3DAtivo = false;
-    document.getElementById("container-3d").style.display = "none";
-    if (animId3D) cancelAnimationFrame(animId3D);
-  }
-
-  function criarGeometria(tipo) {
-    switch (tipo) {
-      case 'torus': return new THREE.TorusGeometry(1.2, 0.4, 16, 100);
-      case 'cube': return new THREE.BoxGeometry(1.5, 1.5, 1.5);
-      case 'sphere': return new THREE.SphereGeometry(1.2, 32, 32);
-      case 'cylinder': return new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
-      case 'cone': return new THREE.ConeGeometry(1, 2, 32);
-      // Novas geometrias otimizadas
-      case 'tetrahedron': return new THREE.TetrahedronGeometry(1.5);
-      case 'octahedron': return new THREE.OctahedronGeometry(1.5);
-      case 'dodecahedron': return new THREE.DodecahedronGeometry(1.3);
-      case 'icosahedron': return new THREE.IcosahedronGeometry(1.3);
-      case 'plane': return new THREE.PlaneGeometry(2, 2);
-      case 'ring': return new THREE.RingGeometry(0.5, 1.5, 32);
-      default: return new THREE.BoxGeometry(1, 1, 1);
-    }
-  }
-
-  function criarMaterial3D(tipo, corHex) {
-    const color = new THREE.Color(corHex);
-    if (tipo === 'standard') {
-      return new THREE.MeshStandardMaterial({ color, roughness: 0.2, metalness: 0.8 });
-    } else if (tipo === 'glass') {
-      return new THREE.MeshPhysicalMaterial({ color, roughness: 0.1, transmission: 0.9, opacity: 1, transparent: true });
-    } else {
-      return new THREE.MeshPhongMaterial({ color, shininess: 100 });
-    }
-  }
-
-  function adicionarObjeto3D(tipoForma, tipoMaterial, corHex) {
-    const chkMesclar = document.getElementById("chkMesclar").checked;
-    if (!chkMesclar) {
-      limparCena3D();
-    }
-
-    const geo = criarGeometria(tipoForma);
-    const mat = criarMaterial3D(tipoMaterial, corHex);
-    const mesh = new THREE.Mesh(geo, mat);
-
-    if (chkMesclar && grupoProjeto3D.children.length > 0) {
-      mesh.position.set((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2);
-    }
-
-    grupoProjeto3D.add(mesh);
-  }
-
-  function adicionarForma3DManual() {
-    const forma = document.getElementById("selectForma").value;
-    const material = document.getElementById("selectMaterial").value;
-    const cor = document.getElementById("corObjeto").value;
-    adicionarObjeto3D(forma, material, cor);
-  }
-
-  function limparCena3D() {
-    if (grupoProjeto3D) {
-      while (grupoProjeto3D.children.length > 0) {
-        grupoProjeto3D.remove(grupoProjeto3D.children[0]);
-      }
-    }
-  }
-
-  function salvarProjeto3D() {
-    if (!grupoProjeto3D || grupoProjeto3D.children.length === 0) {
-      alert("Não há objetos no projeto 3D para salvar, Mestre!");
-      return;
-    }
-
-    const nomeProjeto = prompt("Digite o nome do projeto 3D:", "Projeto Jade " + (memoria.projetos3D ? memoria.projetos3D.length + 1 : 1));
-    if (!nomeProjeto) return;
-
-    const dadosObjetos = grupoProjeto3D.children.map(obj => ({
-      tipoForma: obj.geometry.type,
-      cor: "#" + obj.material.color.getHexString(),
-      posicao: { x: obj.position.x, y: obj.position.y, z: obj.position.z }
-    }));
-
-    if (!memoria.projetos3D) memoria.projetos3D = [];
-    memoria.projetos3D.push({
-      nome: nomeProjeto,
-      data: new Date().toLocaleDateString('pt-BR'),
-      objetos: dadosObjetos
-    });
-
-    salvarMemoria();
-    escrever(`Projeto 3D <b>"${nomeProjeto}"</b> salvo com sucesso na minha memória, Mestre!`, "jade");
-    falar(`Projeto ${nomeProjeto} salvo na minha memória!`);
-  }
-
-  function interpretarVozPara3D(texto) {
-    const t = normalizar(texto);
-    let formaDetectada = null;
-    let nomeObjeto = "";
-
-    if (/\b(pulseira|anel|rosca|torus|rosquinha|coroa)\b/.test(t)) {
-      formaDetectada = 'torus';
-      nomeObjeto = "pulseira / anel";
-    } else if (/\b(caixa|cubo|bloco|quadrado|dado)\b/.test(t)) {
-      formaDetectada = 'cube';
-      nomeObjeto = "cubo / caixa";
-    } else if (/\b(bola|esfera|globo|orbe)\b/.test(t)) {
-      formaDetectada = 'sphere';
-      nomeObjeto = "esfera";
-    } else if (/\b(cilindro|tubo|lata|barril)\b/.test(t)) {
-      formaDetectada = 'cylinder';
-      nomeObjeto = "cilindro";
-    } else if (/\b(cone|piramide|chapeu)\b/.test(t)) {
-      formaDetectada = 'cone';
-      nomeObjeto = "cone";
-    } else if (/\b(tetraedro|piramide simples|quatro lados)\b/.test(t)) {
-      formaDetectada = 'tetrahedron';
-      nomeObjeto = "tetraedro";
-    } else if (/\b(octaedro|diamante)\b/.test(t)) {
-      formaDetectada = 'octahedron';
-      nomeObjeto = "octaedro";
-    } else if (/\b(dodecaedro)\b/.test(t)) {
-      formaDetectada = 'dodecahedron';
-      nomeObjeto = "dodecaedro";
-    } else if (/\b(icosaedro)\b/.test(t)) {
-      formaDetectada = 'icosahedron';
-      nomeObjeto = "icosaedro";
-    } else if (/\b(plano|placa|chapa|superficie)\b/.test(t)) {
-      formaDetectada = 'plane';
-      nomeObjeto = "plano";
-    } else if (/\b(disco|anel vazado)\b/.test(t)) {
-      formaDetectada = 'ring';
-      nomeObjeto = "disco vazado";
-    }
-
-    if (formaDetectada) {
-      const cor = document.getElementById("corObjeto").value;
-      const mat = document.getElementById("selectMaterial").value;
-      adicionarObjeto3D(formaDetectada, mat, cor);
-      
-      const resposta = `Entendido, Mestre! Gere um modelo 3D de <b>${nomeObjeto}</b> no estúdio.`;
-      escrever(resposta, "jade");
-      falar(`Gerando modelo 3D de ${nomeObjeto} para você, Mestre!`);
-      return true;
-    }
-    return false;
-  }
-
-  // --- NAVEGAÇÃO E RECURSOS DO SISTEMA ---
-  function prepararAberturaSite() {
-    inputEl.value = "/abrir ";
-    inputEl.focus();
-    escrever("[Atalho M] Digite o nome ou URL do site que deseja acessar e pressione Enter.", "jade");
-  }
-
-  function executarAberturaSite(urlDigitada) {
-    let urlFinal = urlDigitada.trim();
-    if (!urlFinal.includes(".") && !urlFinal.startsWith("http")) {
-      urlFinal += ".com";
-    }
-    if (!urlFinal.startsWith("http://") && !urlFinal.startsWith("https://")) {
-      urlFinal = "https://" + urlFinal;
-    }
-
-    window.open(urlFinal, "_blank");
-    escrever(`Redirecionando para <b>"${urlFinal}"</b>, Mestre!`, "jade");
-    falar(`Abrindo o site para você, Mestre!`);
-  }
-
-  function voltarParaJade() {
-    fecharModo3D();
-    inputEl.value = "";
-    inputEl.focus();
-    
-    const msgRetorno = "De volta ao chat da Jade, Mestre! Em que posso te ajudar?";
-    escrever(`[Atalho N] ${msgRetorno}`, "jade");
-    falar("De volta para a Jade, Mestre!");
-  }
-
-  function traduzirCodigoClima(code) {
-    const codigos = {
-      0: "Céu Limpo", 1: "Predominantemente Limpo", 2: "Parcialmente Nublado", 3: "Encoberto",
-      45: "Nevoeiro", 48: "Nevoeiro com Geada", 51: "Garoa Leve", 53: "Garoa Moderada", 55: "Garoa Densa",
-      61: "Chuva Leve", 63: "Chuva Moderada", 65: "Chuva Forte", 80: "Pancadas de Chuva Leves",
-      95: "Tempestade Leve ou Moderada"
-    };
-    return codigos[code] || "Condição Variável";
-  }
-
-  async function gerarRelatorioMestre() {
-    escrever("[Atalho V] Solicitando informações do ambiente...", "user");
-    
-    const agora = new Date();
-    const horaFormatada = agora.toLocaleTimeString('pt-BR');
-    const dataFormatada = agora.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-    let bateriaTexto = "Indisponível";
-    if (navigator.getBattery) {
-      try {
-        const bat = await navigator.getBattery();
-        bateriaTexto = `${Math.round(bat.level * 100)}% ${bat.charging ? "(Carregando)" : "(Desconectado)"}`;
-      } catch (e) {}
-    }
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const lat = pos.coords.latitude;
-          const lon = pos.coords.longitude;
-          try {
-            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=auto`);
-            const data = await res.json();
-            const curr = data.current;
-
-            const temp = curr.temperature_2m;
-            const climaDesc = traduzirCodigoClima(curr.weather_code);
-
-            const informacoesClima = `
-• <b>Temperatura Atual:</b> ${temp}°C
-• <b>Condição:</b> ${climaDesc}
-• <b>Umidade:</b> ${curr.relative_humidity_2m}%`;
-            
-            exibirRelatorioFinal(horaFormatada, dataFormatada, informacoesClima, bateriaTexto, temp);
-          } catch (err) {
-            exibirRelatorioFinal(horaFormatada, dataFormatada, "Falha ao consultar serviço de clima.", bateriaTexto);
-          }
-        },
-        () => exibirRelatorioFinal(horaFormatada, dataFormatada, "Permissão de localização negada.", bateriaTexto)
-      );
-    } else {
-      exibirRelatorioFinal(horaFormatada, dataFormatada, "Geolocalização indisponível.", bateriaTexto);
-    }
-  }
-
-  function exibirRelatorioFinal(hora, data, clima, bateria, temp = null) {
-    let relatorioHTML = `
-Aqui estão suas informações atualizadas, Mestre:
-<br><br>
-<b>Horário:</b> ${hora}<br>
-<b>Data:</b> ${data}<br>
-<b>Bateria:</b> ${bateria}<br>
-<br>
-<b>Dados Meteorológicos:</b>
-${clima}`;
-
-    escrever(relatorioHTML, "jade");
-    falar(`Mestre, agora são ${hora}. ${temp ? `A temperatura atual é de ${temp} graus.` : ''}`);
-  }
-
-  async function pesquisarNaWeb(termoBruto) {
-    try {
-      const urlBusca = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(termoBruto)}&format=json&origin=*`;
-      const resBusca = await fetch(urlBusca);
-      const dataBusca = await resBusca.json();
-
-      if (dataBusca.query && dataBusca.query.search.length > 0) {
-        const tituloArtigo = dataBusca.query.search[0].title;
-        const urlResumo = `https://pt.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(tituloArtigo)}&format=json&origin=*`;
-        const resResumo = await fetch(urlResumo);
-        const dataResumo = await resResumo.json();
-        
-        const pages = dataResumo.query.pages;
-        const pageId = Object.keys(pages)[0];
-        
-        if (pageId !== "-1" && pages[pageId].extract) {
-          return pages[pageId].extract;
-        }
-      }
-    } catch (e) {}
-    return null;
-  }
-
-  async function pensar(msg) {
-    const orig = msg.trim();
-    const txt = normalizar(orig);
-
-    if (orig.startsWith("/abrir ")) {
-      const urlAlvo = orig.replace("/abrir ", "").trim();
-      if (urlAlvo) {
-        executarAberturaSite(urlAlvo);
-        return null;
-      }
-    }
-
-    if (txt.includes("01110100") || txt.includes("modo 3d") || txt.includes("ativar modo 3d")) {
-      ativarModo3D();
-      return null;
-    }
-
-    if (modo3DAtivo) {
-      const processado3D = interpretarVozPara3D(orig);
-      if (processado3D) return null;
-    }
-
-    if (txt.includes("listar projetos") || txt.includes("ver projetos 3d")) {
-      if (!memoria.projetos3D || memoria.projetos3D.length === 0) {
-        return "Você não tem nenhum projeto 3D salvo na memória, Mestre!";
-      }
-      let lista = "Seus projetos 3D salvos, Mestre:<br>";
-      memoria.projetos3D.forEach((p, idx) => {
-        lista += `<br>${idx + 1}. <b>${p.nome}</b> (${p.data}) - ${p.objetos.length} objeto(s)`;
-      });
-      return lista;
-    }
-
-    if (/\b(quem e voce|qual seu nome)\b/.test(txt)) {
-      return "Eu sou a Jade, sua assistente virtual pessoal! Criada para te auxiliar em pesquisas, comandos, navegação e gerenciamento de projetos 3D.";
-    }
-
-    if (/\b(criador|seu mestre|luiz benicio)\b/.test(txt)) {
-      return "Meu único criador e mestre é o Luiz Benício!";
-    }
-
-    if (/\b(como voce esta|tudo bem)\b/.test(txt)) {
-      return "Estou ótima e 100% operacional, Mestre!";
-    }
-
-    if (/\b(obrigado|valeu)\b/.test(txt)) {
-      return "Disponha sempre, Mestre!";
-    }
-
-    for (let item of memoria.conhecimentos) {
-      if (normalizar(item.pergunta) === txt) {
-        return item.resposta;
-      }
-    }
-
-    const expressao = orig.match(/[\d\.\(\)]+\s*[\+\-\*\/\^\%]\s*[\d\.\(\)]+/);
-    if (expressao) {
-      try {
-        let expFormatada = expressao[0].replace(/\^/g, "**");
-        const res = new Function(`return ${expFormatada}`)();
-        return `O resultado do cálculo é: <b>${res}</b>`;
-      } catch (e) {}
-    }
-
-    const resultadoWeb = await pesquisarNaWeb(orig);
-    if (resultadoWeb) {
-      return resultadoWeb;
-    }
-
-    return "Não encontrei informações sobre isso na web ou na minha memória, Mestre. Se quiser me ensinar, basta dizer <i>'quero te ensinar'</i>!";
-  }
-
-  async function enviar() {
-    const msg = inputEl.value.trim();
-    if (!msg) return;
-
-    escrever(msg, "user");
-    inputEl.value = "";
-
-    const txtNorm = normalizar(msg);
-
-    if (!modoAprendizado && (txtNorm.includes("ensinar") || txtNorm.includes("quero te ensinar"))) {
-      modoAprendizado = true;
-      etapaAprendizado = 1;
-
-      const r1 = "Com certeza, Mestre! O que você quer me ensinar? Digite a pergunta ou mensagem que vão me falar:";
-      escrever(r1, "jade");
-      falar(r1);
-      return;
-    }
-
-    if (modoAprendizado) {
-      if (etapaAprendizado === 1) {
-        perguntaTemp = msg;
-        etapaAprendizado = 2;
-
-        const r2 = `Entendido! E o que eu devo responder quando me disserem "${perguntaTemp}"?`;
-        escrever(r2, "jade");
-        falar(r2);
-        return;
-      } 
-      else if (etapaAprendizado === 2) {
-        const pLimpa = perguntaTemp.toLowerCase().trim();
-        const existe = memoria.conhecimentos.find(item => item.pergunta === pLimpa);
-
-        if (existe) {
-          existe.resposta = msg;
-        } else {
-          memoria.conhecimentos.push({ pergunta: pLimpa, resposta: msg });
-        }
-        salvarMemoria();
-
-        modoAprendizado = false;
-        etapaAprendizado = 0;
-        perguntaTemp = "";
-
-        const r3 = "Perfeito, Mestre! Aprendi! Da próxima vez já saberei o que responder!";
-        escrever(r3, "jade");
-        falar(r3);
-        return;
-      }
-    }
-
-    const resposta = await pensar(msg);
-    if (resposta) {
-      escrever(resposta, "jade");
-      falar(resposta);
-    }
-  }
-
-  function iniciarGravacao(e) {
-    if (e) e.preventDefault();
-    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!Speech) {
-      alert("Seu navegador não suporta reconhecimento de voz.");
-      return;
-    }
-
-    if (gravacaoAtiva) return;
-
-    rec = new Speech();
-    rec.lang = "pt-BR";
-    rec.continuous = true;
-    rec.interimResults = true;
-
-    rec.onstart = () => {
-      gravacaoAtiva = true;
-      btnMic.classList.add("recording");
-    };
-
-    rec.onresult = (e) => {
-      let textoTranscrito = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        textoTranscrito += e.results[i][0].transcript;
-      }
-      inputEl.value = textoTranscrito;
-    };
-
-    rec.onerror = () => pararGravacao();
-    rec.start();
-  }
-
-  function pararGravacao(e) {
-    if (e) e.preventDefault();
-    if (!gravacaoAtiva) return;
-
-    gravacaoAtiva = false;
-    btnMic.classList.remove("recording");
-
-    if (rec) {
-      rec.stop();
-      setTimeout(() => {
-        if (inputEl.value.trim() !== "") {
-          enviar();
-        }
-      }, 400);
-    }
-  }
-
-  if ('speechSynthesis' in window) {
-    speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
-  }
+/* ================= ESTADO ================= */
+let memoria = { conhecimentos: [], tarefas: [], projetos3D: [], perfil: {} };
+try { Object.assign(memoria, JSON.parse(localStorage.getItem("jade_memoria")) || {}); } catch (e) {}
+memoria.perfil = memoria.perfil || {};
+let modoAprendizado = false, etapaAprendizado = 0, perguntaTemp = "";
+let gravacaoAtiva = false, rec = null, vozLigada = true;
+let modo3DAtivo = false, scene3D, camera3D, renderer3D, grupoProjeto3D, controls3D, animId3D = null;
+const ctx = { ultimoTema: null, historico: [], msgs: 0 };
+
+const inputEl = document.getElementById("mensagem");
+const chatEl = document.getElementById("chat");
+const btnMic = document.getElementById("btnOuvir");
+
+/* ================= UTILIDADES ================= */
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const rnd = arr => arr[Math.floor(Math.random() * arr.length)];
+const salvarMemoria = () => { try { localStorage.setItem("jade_memoria", JSON.stringify(memoria)); } catch (e) {} };
+
+function normalizar(txt) {
+  return String(txt).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/(.)\1{2,}/g, "$1").replace(/[?!=.,;:]/g, " ").replace(/\s+/g, " ").trim();
+}
+const STOP = new Set("a o as os um uma de do da dos das em no na nos nas por para pra com que e eh me te se ao aos jade voce vc mestre porque pq favor pode poderia queria quero gostaria".split(" "));
+const tokens = t => normalizar(t).split(" ").filter(w => w && !STOP.has(w));
+
+function lev(a, b) {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m || !n) return Math.max(m, n);
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++)
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+const similaridade = (a, b) => { a = normalizar(a); b = normalizar(b); const mx = Math.max(a.length, b.length); return mx ? 1 - lev(a, b) / mx : 1; };
+
+function saudacaoHora() {
+  const h = new Date().getHours();
+  return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+}
+const chamar = () => memoria.perfil.nome ? esc(memoria.perfil.nome) : "Mestre";
+
+/* ================= VOZ / CHAT ================= */
+function alternarVoz() {
+  vozLigada = !vozLigada;
+  if (!vozLigada && 'speechSynthesis' in window) speechSynthesis.cancel();
+  document.getElementById("btnVoz").textContent = "Voz: " + (vozLigada ? "ligada" : "desligada");
+}
+
+function falar(texto) {
+  if (!vozLigada || !('speechSynthesis' in window)) return;
+  let t = texto.replace(/<[^>]*>?/gm, ' ').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim();
+  if (t.length > 220) t = t.substring(0, 220).replace(/\s\S*$/, "") + "... o restante está no chat!";
+  speechSynthesis.cancel();
+  const v = new SpeechSynthesisUtterance(t);
+  v.lang = "pt-BR"; v.pitch = 1.2; v.rate = 1.0;
+  const fem = speechSynthesis.getVoices().find(x => x.lang.includes("pt") && /Luciana|Yelda|Google português|Maria|Helena|Francisca/.test(x.name));
+  if (fem) v.voice = fem;
+  speechSynthesis.speak(v);
+}
+
+function escrever(texto, remetente, cru) {
+  const div = document.createElement("div");
+  div.classList.add("msg");
+  if (remetente === "user") {
+    div.classList.add("msg-user");
+    div.innerHTML = `<b>Mestre:</b> ${cru ? texto : esc(texto)}`;
+  } else {
+    div.classList.add("msg-jade");
+    div.innerHTML = `<b>Jade:</b> ${texto}`;
+  }
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  return div;
+}
+
+function jadeDiz(html, voz) { escrever(html, "jade"); falar(voz || html); }
+
+function renderChips() {
+  const sugestoes = ["Que horas são?", "Conte uma piada", "Minhas tarefas", "Modo 3D", "Ajuda"];
+  const box = document.getElementById("chips");
+  box.innerHTML = "";
+  sugestoes.forEach(s => {
+    const c = document.createElement("span");
+    c.className = "chip"; c.textContent = s;
+    c.onclick = () => { inputEl.value = s; enviar(); };
+    box.appendChild(c);
+  });
+}
+
+/* ================= ATALHOS ================= */
+inputEl.addEventListener("keydown", e => { if (e.key === "Enter") enviar(); });
+window.addEventListener("keydown", e => {
+  if (document.activeElement === inputEl) return;
+  const k = e.key.toLowerCase();
+  if (k === "c" && !gravacaoAtiva) iniciarGravacao();
+  else if (k === "v") gerarRelatorioMestre();
+  else if (k === "m") { e.preventDefault(); prepararAberturaSite(); }
+  else if (k === "t") { e.preventDefault(); ativarModo3D(); }
+  else if (k === "n") { e.preventDefault(); voltarParaJade(); }
+});
+window.addEventListener("keyup", e => { if (e.key.toLowerCase() === "c" && gravacaoAtiva) pararGravacao(); });
+
+function limparMemoria() {
+  if (confirm("Mestre, deseja apagar todo o aprendizado, tarefas, perfil e projetos 3D salvos?")) {
+    memoria = { conhecimentos: [], tarefas: [], projetos3D: [], perfil: {} };
+    salvarMemoria();
+    jadeDiz("Toda a minha memória foi limpa, Mestre! Recomeçando do zero.");
+  }
+}
+
+/* ================= MÓDULO 3D ================= */
+function inicializarCena3D() {
+  const c = document.getElementById("canvas-3d");
+  c.innerHTML = "";
+  if (animId3D) cancelAnimationFrame(animId3D);
+  if (typeof THREE === "undefined") { c.innerHTML = "<p style='padding:10px;font-size:12px'>Three.js não carregou. Verifique a internet.</p>"; return; }
+  scene3D = new THREE.Scene();
+  camera3D = new THREE.PerspectiveCamera(60, c.clientWidth / c.clientHeight, 0.1, 1000);
+  camera3D.position.set(0, 0, 5);
+  renderer3D = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer3D.setSize(c.clientWidth, c.clientHeight);
+  renderer3D.setPixelRatio(window.devicePixelRatio);
+  c.appendChild(renderer3D.domElement);
+  controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
+  controls3D.enableDamping = true; controls3D.dampingFactor = 0.05;
+  controls3D.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+  const luz = new THREE.DirectionalLight(0xffffff, 1); luz.position.set(5, 5, 5).normalize(); scene3D.add(luz);
+  scene3D.add(new THREE.AmbientLight(0x404040, 1.5));
+  grupoProjeto3D = new THREE.Group(); scene3D.add(grupoProjeto3D);
+  (function loop() { animId3D = requestAnimationFrame(loop); controls3D.update(); renderer3D.render(scene3D, camera3D); })();
+}
+
+function ativarModo3D() {
+  modo3DAtivo = true;
+  document.getElementById("container-3d").style.display = "flex";
+  inicializarCena3D();
+  jadeDiz("[Modo 01110100] Estúdio 3D ativado, Mestre! Peça por voz ou texto: <i>\"cria um cubo vermelho de vidro\"</i>. Use pinça para zoom e arraste para girar.", "Modo 3D de projetos ativado, Mestre!");
+}
+function fecharModo3D() {
+  modo3DAtivo = false;
+  document.getElementById("container-3d").style.display = "none";
+  if (animId3D) cancelAnimationFrame(animId3D);
+}
+
+function criarGeometria(t) {
+  switch (t) {
+    case 'torus': return new THREE.TorusGeometry(1.2, 0.4, 16, 100);
+    case 'cube': return new THREE.BoxGeometry(1.5, 1.5, 1.5);
+    case 'sphere': return new THREE.SphereGeometry(1.2, 32, 32);
+    case 'cylinder': return new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
+    case 'cone': return new THREE.ConeGeometry(1, 2, 32);
+    case 'tetrahedron': return new THREE.TetrahedronGeometry(1.5);
+    case 'octahedron': return new THREE.OctahedronGeometry(1.5);
+    case 'dodecahedron': return new THREE.DodecahedronGeometry(1.3);
+    case 'icosahedron': return new THREE.IcosahedronGeometry(1.3);
+    case 'plane': return new THREE.PlaneGeometry(2, 2);
+    case 'ring': return new THREE.RingGeometry(0.5, 1.5, 32);
+    default: return new THREE.BoxGeometry(1, 1, 1);
+  }
+}
+function criarMaterial3D(tipo, hex) {
+  const color = new THREE.Color(hex), side = THREE.DoubleSide;
+  if (tipo === 'standard') return new THREE.MeshStandardMaterial({ color, roughness: .2, metalness: .8, side });
+  if (tipo === 'glass') return new THREE.MeshPhysicalMaterial({ color, roughness: .1, transmission: .9, opacity: 1, transparent: true, side });
+  return new THREE.MeshPhongMaterial({ color, shininess: 100, side });
+}
+function adicionarObjeto3D(forma, material, cor) {
+  if (!grupoProjeto3D) return;
+  const mesclar = document.getElementById("chkMesclar").checked;
+  if (!mesclar) limparCena3D();
+  const mesh = new THREE.Mesh(criarGeometria(forma), criarMaterial3D(material, cor));
+  mesh.userData.forma = forma; mesh.userData.material = material;
+  if (mesclar && grupoProjeto3D.children.length > 0)
+    mesh.position.set((Math.random() - .5) * 3, (Math.random() - .5) * 3, (Math.random() - .5) * 3);
+  grupoProjeto3D.add(mesh);
+}
+function adicionarForma3DManual() {
+  adicionarObjeto3D(selectForma.value, selectMaterial.value, corObjeto.value);
+}
+function limparCena3D() {
+  if (grupoProjeto3D) while (grupoProjeto3D.children.length) {
+    const o = grupoProjeto3D.children[0];
+    o.geometry.dispose(); o.material.dispose(); grupoProjeto3D.remove(o);
+  }
+}
+function salvarProjeto3D() {
+  if (!grupoProjeto3D || !grupoProjeto3D.children.length) { alert("Não há objetos no projeto 3D para salvar, Mestre!"); return; }
+  const nome = prompt("Digite o nome do projeto 3D:", "Projeto Jade " + (memoria.projetos3D.length + 1));
+  if (!nome) return;
+  memoria.projetos3D.push({
+    nome, data: new Date().toLocaleDateString('pt-BR'),
+    objetos: grupoProjeto3D.children.map(o => ({
+      forma: o.userData.forma, material: o.userData.material, cor: "#" + o.material.color.getHexString(),
+      posicao: { x: o.position.x, y: o.position.y, z: o.position.z }
+    }))
+  });
+  salvarMemoria();
+  jadeDiz(`Projeto 3D <b>"${esc(nome)}"</b> salvo na minha memória, Mestre! Diga <i>"abrir projeto ${memoria.projetos3D.length}"</i> para carregá-lo depois.`, `Projeto ${nome} salvo na minha memória!`);
+}
+function carregarProjeto3D(idx) {
+  const p = memoria.projetos3D[idx];
+  if (!p) return false;
+  if (!modo3DAtivo) ativarModo3D();
+  limparCena3D();
+  p.objetos.forEach(o => {
+    const m = new THREE.Mesh(criarGeometria(o.forma), criarMaterial3D(o.material || "phong", o.cor));
+    m.userData.forma = o.forma; m.userData.material = o.material || "phong";
+    m.position.set(o.posicao.x, o.posicao.y, o.posicao.z);
+    grupoProjeto3D.add(m);
+  });
+  return p;
+}
+
+const FORMAS = [
+  ['tetrahedron', /\b(tetraedro|quatro lados)\b/, "tetraedro"],
+  ['octahedron', /\b(octaedro|diamante)\b/, "octaedro"],
+  ['dodecahedron', /\b(dodecaedro)\b/, "dodecaedro"],
+  ['icosahedron', /\b(icosaedro)\b/, "icosaedro"],
+  ['ring', /\b(disco|anel vazado)\b/, "disco vazado"],
+  ['torus', /\b(pulseira|anel|rosca|torus|rosquinha|coroa|aro)\b/, "pulseira / anel"],
+  ['cube', /\b(caixa|cubo|bloco|quadrado|dado)\b/, "cubo"],
+  ['sphere', /\b(bola|esfera|globo|orbe)\b/, "esfera"],
+  ['cylinder', /\b(cilindro|tubo|lata|barril)\b/, "cilindro"],
+  ['cone', /\b(cone|piramide|chapeu)\b/, "cone"],
+  ['plane', /\b(plano|placa|chapa|superficie)\b/, "plano"]
+];
+const CORES = { vermelh: "#e02424", azul: "#2563eb", verde: "#16a34a", amarel: "#facc15", laranj: "#f97316", roxo: "#8b3dff", rosa: "#ec4899", branc: "#f5f5f5", pret: "#222222", dourad: "#d4af37", prat: "#c0c0c0", ciano: "#06b6d4", cinza: "#888888" };
+
+function interpretarVozPara3D(texto) {
+  const t = normalizar(texto);
+  const respostas = [];
+  let mudouAlgo = false;
+
+  if (/\b(limpar|apagar|zerar|remover tudo)\b.*\b(cena|tudo|estudio|objetos?)\b/.test(t)) {
+    limparCena3D(); jadeDiz("Cena limpa, Mestre!"); return true;
+  }
+  const mp = t.match(/\b(?:abrir|carregar|abre|carrega)\b.*\bprojeto\b\s*(\d+)/);
+  if (mp) {
+    const p = carregarProjeto3D(parseInt(mp[1]) - 1);
+    jadeDiz(p ? `Projeto <b>${esc(p.nome)}</b> carregado, Mestre!` : "Não achei esse projeto, Mestre.", p ? "Projeto carregado!" : "Não achei esse projeto.");
+    return true;
+  }
+  if (/\b(mesclar|juntar|misturar)\b/.test(t)) {
+    const on = !/\b(nao|desativar|parar)\b/.test(t);
+    document.getElementById("chkMesclar").checked = on;
+    respostas.push(on ? "modo mesclar ligado" : "modo mesclar desligado"); mudouAlgo = true;
+  }
+  let mat = null;
+  if (/\b(metal|metalic\w*|aco|ferro)\b/.test(t)) mat = "standard";
+  else if (/\b(vidro|cristal|transparente|reflexiv\w*)\b/.test(t)) mat = "glass";
+  else if (/\b(brilhante|plastico|fosco)\b/.test(t)) mat = "phong";
+  if (mat) { selectMaterial.value = mat; mudouAlgo = true; respostas.push("material " + selectMaterial.options[selectMaterial.selectedIndex].text.toLowerCase()); }
+
+  let cor = null;
+  for (const k in CORES) if (t.includes(k)) { cor = CORES[k]; break; }
+  if (cor) { corObjeto.value = cor; mudouAlgo = true; respostas.push("cor aplicada"); }
+
+  const f = FORMAS.find(x => x[1].test(t));
+  const querCriar = f && /\b(cri\w*|faz\w*|gerar?\w*|gere|monte|montar|adicion\w*|quero|coloc\w*|mostr\w*|desenh\w*|modelo|projeto)\b/.test(t) || (f && t.split(" ").length <= 4);
+  if (querCriar) {
+    adicionarObjeto3D(f[0], selectMaterial.value, corObjeto.value);
+    selectForma.value = f[0];
+    jadeDiz(`Pronto, Mestre! Gerei um modelo 3D de <b>${f[2]}</b>${respostas.length ? " (" + respostas.join(", ") + ")" : ""}.`, `Gerei um modelo de ${f[2]} para você, Mestre!`);
+    return true;
+  }
+  // Mudar a cor/material do que já existe
+  if ((cor || mat) && grupoProjeto3D && grupoProjeto3D.children.length && /\b(muda\w*|troca\w*|pinta\w*|deix\w*|fica\w*|torna\w*)\b/.test(t)) {
+    grupoProjeto3D.children.forEach(o => { o.material = criarMaterial3D(mat || o.userData.material, "#" + (cor ? cor.slice(1) : o.material.color.getHexString())); if (mat) o.userData.material = mat; });
+    jadeDiz("Alterei o objeto atual, Mestre!"); return true;
+  }
+  if (mudouAlgo) { jadeDiz("Ajustei: " + respostas.join(", ") + ". Agora diga a forma que quer criar!"); return true; }
+  return false;
+}
+
+/* ================= SISTEMA ================= */
+function prepararAberturaSite() {
+  inputEl.value = "/abrir "; inputEl.focus();
+  escrever("[Atalho M] Digite o nome ou URL do site e pressione Enter.", "jade");
+}
+function executarAberturaSite(u) {
+  let url = u.trim().replace(/\s+/g, "");
+  if (!url.includes(".") && !url.startsWith("http")) url += ".com";
+  if (!/^https?:\/\//.test(url)) url = "https://" + url;
+  window.open(url, "_blank");
+  jadeDiz(`Redirecionando para <b>${esc(url)}</b>, Mestre!`, "Abrindo o site para você, Mestre!");
+}
+function voltarParaJade() {
+  fecharModo3D(); inputEl.value = ""; inputEl.focus();
+  jadeDiz("[Atalho N] De volta ao chat da Jade, Mestre! Em que posso ajudar?", "De volta para a Jade, Mestre!");
+}
+
+const CLIMA = { 0: "Céu limpo", 1: "Predominantemente limpo", 2: "Parcialmente nublado", 3: "Encoberto", 45: "Nevoeiro", 48: "Nevoeiro com geada", 51: "Garoa leve", 53: "Garoa moderada", 55: "Garoa densa", 61: "Chuva leve", 63: "Chuva moderada", 65: "Chuva forte", 80: "Pancadas leves de chuva", 81: "Pancadas de chuva", 82: "Pancadas fortes", 95: "Tempestade" };
+
+async function gerarRelatorioMestre() {
+  escrever("[Atalho V] Solicitando informações do ambiente...", "user");
+  const agora = new Date();
+  const hora = agora.toLocaleTimeString('pt-BR');
+  const data = agora.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  let bat = "Indisponível";
+  if (navigator.getBattery) { try { const b = await navigator.getBattery(); bat = `${Math.round(b.level * 100)}% ${b.charging ? "(Carregando)" : "(Desconectado)"}`; } catch (e) {} }
+  const fim = (clima, temp) => {
+    jadeDiz(`Aqui estão suas informações, ${chamar()}:<br><br><b>Horário:</b> ${hora}<br><b>Data:</b> ${data}<br><b>Bateria:</b> ${bat}<br><br><b>Clima:</b><br>${clima}`,
+      `${chamar()}, agora são ${hora}. ${temp != null ? "A temperatura atual é de " + temp + " graus." : ""}`);
+  };
+  if (!navigator.geolocation) return fim("Geolocalização indisponível.");
+  navigator.geolocation.getCurrentPosition(async pos => {
+    try {
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=auto`);
+      const c = (await r.json()).current;
+      fim(`• <b>Temperatura:</b> ${c.temperature_2m}°C (sensação ${c.apparent_temperature}°C)<br>• <b>Condição:</b> ${CLIMA[c.weather_code] || "Variável"}<br>• <b>Umidade:</b> ${c.relative_humidity_2m}%<br>• <b>Vento:</b> ${c.wind_speed_10m} km/h`, c.temperature_2m);
+    } catch (e) { fim("Falha ao consultar o serviço de clima."); }
+  }, () => fim("Permissão de localização negada."));
+}
+
+/* ================= CÁLCULO SEGURO ================= */
+function calcular(orig) {
+  let t = normalizar(orig).replace(/\bquanto\b|\bcalcul\w*|\bresultado\b|\bconta\b|\bde\b(?=\s*\d.*\d)/g, " ");
+  t = t.replace(/(\d+(?:[.,]\d+)?)\s*(?:%|por cento)\s*de\s*(\d+(?:[.,]\d+)?)/g, (_, a, b) => `(${a.replace(",", ".")}/100*${b.replace(",", ".")})`);
+  t = t.replace(/raiz\s*(?:quadrada\s*)?(?:de\s*)?(\d+(?:[.,]\d+)?)/g, (_, a) => `(${Math.sqrt(parseFloat(a.replace(",", ".")))})`);
+  t = t.replace(/(\d+(?:[.,]\d+)?)\s*ao\s*quadrado/g, "($1**2)").replace(/(\d+(?:[.,]\d+)?)\s*ao\s*cubo/g, "($1**3)")
+    .replace(/elevado\s*a\s*/g, "**").replace(/\^/g, "**")
+    .replace(/\bmais\b/g, "+").replace(/\bmenos\b/g, "-").replace(/\bvezes\b|\bmultiplicado por\b/g, "*")
+    .replace(/(\d)\s*x\s*(\d)/g, "$1*$2").replace(/\bdividido por\b|\bdividido\b|\bpor\b/g, "/")
+    .replace(/(\d),(\d)/g, "$1.$2");
+  if (!/\d/.test(t) || !/[+\-*/%]/.test(t.replace(/^\s*-/, ""))) return null;
+  if (!/^[\d+\-*/().%\s]+$/.test(t)) return null;
+  try {
+    const r = Function(`"use strict";return (${t})`)();
+    if (typeof r !== "number" || !isFinite(r)) return "Não dá para calcular isso, Mestre (divisão por zero ou resultado inválido).";
+    return `O resultado é: <b>${Number.isInteger(r) ? r : +r.toFixed(6)}</b>`;
+  } catch (e) { return null; }
+}
+
+/* ================= BUSCA NA WEB ================= */
+async function pesquisarNaWeb(termo) {
+  const limpo = normalizar(termo).replace(/^(o que e|o que sao|quem e|quem foi|quem sao|me fale sobre|fale sobre|fala sobre|explique|explica|o que significa|significado de|pesquise sobre|pesquise|pesquisar|busque|me diga sobre|defina|definicao de|qual e|quais sao)\s+/, "").replace(/^(a|o|as|os|um|uma)\s+/, "");
+  if (limpo.length < 2) return null;
+  try {
+    const b = await (await fetch(`https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(limpo)}&format=json&origin=*`)).json();
+    const achados = b.query && b.query.search;
+    if (!achados || !achados.length) return null;
+    const titulo = achados[0].title;
+    const rel = tokens(limpo);
+    if (rel.length && !rel.some(w => normalizar(titulo).includes(w.slice(0, 5)) || normalizar(achados[0].snippet).includes(w))) return null;
+    const r = await (await fetch(`https://pt.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(titulo)}&format=json&origin=*`)).json();
+    const pg = Object.values(r.query.pages)[0];
+    if (!pg || !pg.extract) return null;
+    let ext = pg.extract.replace(/\s+/g, " ").trim();
+    if (ext.length > 420) { ext = ext.substring(0, 420); ext = ext.substring(0, Math.max(ext.lastIndexOf(". ") + 1, 200)); }
+    ctx.ultimoTema = titulo;
+    return `<b>${esc(titulo)}</b><br>${esc(ext)}<br><br><i>Quer saber mais? Diga "pesquisar ${esc(titulo)} no google".</i>`;
+  } catch (e) { return null; }
+}
+
+/* ================= INTENÇÕES (INTERPRETAÇÃO) ================= */
+const PIADAS = [
+  "Por que o programador saiu de casa? Porque não tinha classe... nem herança!",
+  "O que o zero disse para o oito? Belo cinto!",
+  "Por que o computador foi ao médico? Porque estava com um vírus!",
+  "Qual é o café dos programadores? Java, claro!",
+  "Por que a IA não conta segredos? Porque ela já os processa em nuvem!"
+];
+const CURIOSIDADES = [
+  "O primeiro bug de computador foi uma mariposa real, achada num computador Harvard Mark II em 1947.",
+  "O mel nunca estraga: potes com milhares de anos ainda estavam comestíveis.",
+  "Polvos têm três corações e sangue azul.",
+  "Um dia em Vênus dura mais que um ano em Vênus."
+];
+
+const INTENCOES = [
+  { id: "saudacao", k: ["oi", "ola", "eai", "opa", "salve", "hey", "bom dia", "boa tarde", "boa noite", "e ai", "fala jade", "oie"],
+    r: () => `${saudacaoHora()}, ${chamar()}! ${rnd(["Que bom te ver por aqui!", "Estou pronta para o que precisar.", "Como posso ajudar hoje?", "Pronta para a próxima missão!"])}` },
+  { id: "estado", k: ["como voce esta", "como vai", "tudo bem", "tudo bom", "como esta", "como se sente", "ta bem", "beleza"],
+    r: () => rnd([`Estou ótima e 100% operacional, ${chamar()}! E você, como está?`, "Tudo certo por aqui, com os circuitos em dia! E com você?", "Muito bem! Pronta para ajudar. Como está o seu dia?"]), tema: "estado" },
+  { id: "humor_pos", k: ["estou bem", "to bem", "tudo otimo", "estou feliz", "to feliz", "estou otimo", "to otimo", "ta tudo bem", "tudo certo"],
+    r: () => "Que ótimo saber disso, Mestre! Isso me deixa contente. O que vamos fazer hoje?" },
+  { id: "humor_neg", k: ["estou triste", "to triste", "estou mal", "to mal", "estou cansado", "to cansado", "estressado", "estou desanimado", "to ansioso", "estou ansioso"],
+    r: () => "Poxa, sinto muito, Mestre. Respire fundo: um passo de cada vez. Se quiser, posso contar uma piada ou organizar suas tarefas para aliviar a cabeça. Estou aqui com você." },
+  { id: "identidade", k: ["quem e voce", "qual seu nome", "o que voce e", "se apresente", "quem eh voce", "voce e quem", "seu nome"],
+    r: () => "Eu sou a Jade, sua assistente virtual pessoal! Ajudo com pesquisas, cálculos, tarefas, lembretes, navegação e projetos 3D. Criada com carinho pelo Luiz Benício." },
+  { id: "criador", k: ["criador", "seu mestre", "luiz benicio", "quem te criou", "quem te fez", "quem te programou", "quem e seu dono", "seu dono"],
+    r: () => "Meu único criador e mestre é o Luiz Benício! Foi ele quem me deu vida." },
+  { id: "capacidades", k: ["ajuda", "help", "comandos", "o que voce faz", "o que voce sabe fazer", "o que voce pode fazer", "funcoes", "como te uso", "como usar"],
+    r: () => `Posso, ${chamar()}:<br>• <b>Conversar</b> e responder perguntas (Wikipedia)<br>• <b>Calcular</b>: <i>"quanto é 15% de 200"</i><br>• <b>Tarefas</b>: <i>"adicionar tarefa comprar pão"</i>, <i>"minhas tarefas"</i>, <i>"concluir tarefa 1"</i><br>• <b>Lembretes</b>: <i>"timer de 5 minutos"</i><br>• <b>Sites</b>: <i>"abrir youtube"</i>, <i>"pesquisar receita de bolo no google"</i><br>• <b>3D</b>: <i>"modo 3d"</i>, depois <i>"cria uma esfera azul de vidro"</i><br>• <b>Aprender</b>: <i>"quero te ensinar"</i> · <i>"o que você sabe"</i> · <i>"esquecer X"</i><br>• Me diga seu nome: <i>"meu nome é ..."</i><br>• Piadas, curiosidades, hora e data.` },
+  { id: "hora", k: ["que horas sao", "horas", "hora", "que hora e", "me diga as horas", "horario"],
+    r: () => { const h = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); return `Agora são <b>${h}</b>, ${chamar()}.`; } },
+  { id: "data", k: ["que dia e hoje", "data", "dia da semana", "que dia", "qual a data", "hoje e que dia", "em que dia estamos"],
+    r: () => `Hoje é <b>${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</b>.` },
+  { id: "piada", k: ["piada", "conte uma piada", "me faca rir", "algo engracado", "conta uma piada", "brincadeira"], r: () => rnd(PIADAS) },
+  { id: "curiosidade", k: ["curiosidade", "me surpreenda", "fato curioso", "sabia que", "conte algo interessante", "algo interessante"], r: () => "Curiosidade: " + rnd(CURIOSIDADES) },
+  { id: "elogio", k: ["voce e otima", "voce e incrivel", "parabens", "voce e demais", "gostei", "voce e inteligente", "muito bom", "perfeito", "excelente", "voce e legal", "amo voce"],
+    r: () => rnd([`Ai, você me deixa sem graça, ${chamar()}! Obrigada!`, "Fico feliz que tenha gostado! Sou assim porque tenho um ótimo mestre.", "Obrigada! Vou continuar me esforçando para melhorar sempre."]) },
+  { id: "critica", k: ["voce errou", "errado", "burra", "nao entendeu", "nao era isso", "voce nao entende", "que ruim", "nao funcionou"],
+    r: () => "Desculpe, Mestre! Vou melhorar. Você pode me ensinar a resposta certa dizendo <i>'quero te ensinar'</i>, ou reformular o pedido de outra forma." },
+  { id: "obrigado", k: ["obrigado", "obrigada", "valeu", "brigado", "agradeco", "thanks", "vlw"],
+    r: () => rnd(["Disponha sempre, Mestre!", "De nada! É um prazer ajudar.", "Sempre às ordens!"]) },
+  { id: "despedida", k: ["tchau", "ate logo", "ate mais", "adeus", "flw", "falou", "boa noite jade", "vou dormir", "ate amanha"],
+    r: () => rnd([`Até logo, ${chamar()}! Estarei aqui quando precisar.`, "Tchau! Bons momentos até nos falarmos de novo.", "Até mais! Descanse bem."]) },
+  { id: "sim", k: ["sim", "claro", "com certeza", "pode ser", "ok", "beleza entao", "aham", "isso"], r: () => ctx.ultimoTema === "estado" ? "Que bom! Então me diga: no que posso ajudar?" : "Certo, Mestre! Pode continuar." },
+  { id: "nao", k: ["nao", "nao obrigado", "nada", "deixa quieto", "esquece"], r: () => "Tudo bem, Mestre! Se mudar de ideia, é só chamar." },
+  { id: "status", k: ["status", "relatorio", "informacoes do ambiente", "dados do ambiente", "clima", "temperatura", "bateria", "tempo hoje"], r: () => { gerarRelatorioMestre(); return null; } },
+  { id: "modo3d", k: ["modo 3d", "estudio 3d", "abrir 3d", "ativar 3d", "projetos 3d", "01110100"], r: () => { ativarModo3D(); return null; } }
+];
+
+function classificar(txt) {
+  const tks = normalizar(txt).split(" ").filter(Boolean);
+  const norm = " " + tks.join(" ") + " ";
+  let melhor = null, pontos = 0;
+  for (const it of INTENCOES) {
+    let s = 0;
+    for (const k of it.k) {
+      const palavras = k.split(" ");
+      if (palavras.length > 1) { if (norm.includes(" " + k + " ")) s = Math.max(s, palavras.length * 2.2); }
+      else for (const t of tks) {
+        if (t === k) s = Math.max(s, 2);
+        else if (k.length > 4 && lev(t, k) <= (k.length > 7 ? 2 : 1)) s = Math.max(s, 1.6);
+      }
+    }
+    // Frases curtas favorecem intenção direta; textos longos exigem evidência maior
+    if (s > 0 && tks.length > 8) s *= 0.75;
+    if (s > pontos) { pontos = s; melhor = it; }
+  }
+  return pontos >= 1.6 ? melhor : null;
+}
+
+/* ================= COMANDOS ESTRUTURADOS ================= */
+function listarTarefas() {
+  if (!memoria.tarefas.length) return `Sua lista está vazia, ${chamar()}! Diga <i>"adicionar tarefa ..."</i> para começar.`;
+  return "Suas tarefas:<br>" + memoria.tarefas.map((t, i) => `<br>${i + 1}. ${t.ok ? "✅ <s>" + esc(t.t) + "</s>" : "⬜ " + esc(t.t)}`).join("");
+}
+
+function comandos(orig, t) {
+  // Perfil
+  let m = orig.match(/\b(?:meu nome (?:é|e)|me chamo|pode me chamar de|eu sou (?:o|a)?)\s+([A-Za-zÀ-ú]{2,20})/i);
+  if (m && !/^(muito|so|um|uma|bem)$/i.test(m[1])) {
+    memoria.perfil.nome = m[1].charAt(0).toUpperCase() + m[1].slice(1); salvarMemoria();
+    return `Prazer, <b>${esc(memoria.perfil.nome)}</b>! Vou te chamar assim daqui para frente (mas você sempre será meu Mestre 😉).`;
+  }
+  if (/\b(qual (e )?meu nome|sabe meu nome|como me chamo)\b/.test(t))
+    return memoria.perfil.nome ? `Seu nome é <b>${esc(memoria.perfil.nome)}</b>, Mestre!` : "Ainda não sei o seu nome. Diga <i>'meu nome é ...'</i>!";
+
+  // Tarefas
+  m = orig.match(/\b(?:adicionar|adiciona|nova|criar|anotar|anota|lembrar de|colocar)\s+(?:uma\s+)?(?:tarefa|nota|lembrete)?\s*(?:de|para|:)?\s*(.+)/i);
+  if (m && /\b(tarefa|nota|lembrete|anot\w*)\b/.test(t) && m[1].trim().length > 1) {
+    memoria.tarefas.push({ t: m[1].trim(), ok: false }); salvarMemoria();
+    return `Anotado, Mestre! Tarefa <b>${memoria.tarefas.length}</b>: ${esc(m[1].trim())}`;
+  }
+  if (/\b(minhas tarefas|listar tarefas|ver tarefas|lista de tarefas|o que tenho pra fazer|tarefas pendentes|mostrar tarefas)\b/.test(t)) return listarTarefas();
+  m = t.match(/\b(concluir|concluida|feito|finalizar|terminei|completar)\b.*?(\d+)/);
+  if (m) {
+    const i = parseInt(m[2]) - 1;
+    if (!memoria.tarefas[i]) return "Não achei essa tarefa, Mestre. Diga <i>'minhas tarefas'</i>.";
+    memoria.tarefas[i].ok = true; salvarMemoria();
+    return `Parabéns, Mestre! ✅ Concluí: <b>${esc(memoria.tarefas[i].t)}</b>`;
+  }
+  m = t.match(/\b(apagar|remover|excluir|deletar)\b.*?tarefa\b.*?(\d+)/);
+  if (m) {
+    const i = parseInt(m[2]) - 1;
+    if (!memoria.tarefas[i]) return "Não achei essa tarefa, Mestre.";
+    const r = memoria.tarefas.splice(i, 1)[0]; salvarMemoria();
+    return `Removi a tarefa: <b>${esc(r.t)}</b>`;
+  }
+  if (/\b(limpar|apagar) (todas as )?tarefas\b/.test(t)) { memoria.tarefas = []; salvarMemoria(); return "Lista de tarefas limpa, Mestre!"; }
+
+  // Timer
+  m = t.match(/\b(timer|cronometro|alarme|lembrar|avisa\w*|me lembra)\b.*?(\d+)\s*(segundos?|seg|s|minutos?|min|horas?|h)\b/);
+  if (m) {
+    const n = parseInt(m[2]), u = m[3][0];
+    const ms = n * (u === "h" ? 3600000 : u === "m" ? 60000 : 1000);
+    const rotulo = `${n} ${u === "h" ? "hora(s)" : u === "m" ? "minuto(s)" : "segundo(s)"}`;
+    setTimeout(() => jadeDiz(`⏰ Mestre, seu lembrete de <b>${rotulo}</b> terminou!`, "Mestre, seu tempo acabou!"), ms);
+    return `Combinado! Aviso você em <b>${rotulo}</b>. (Mantenha esta aba aberta.)`;
+  }
+
+  // Projetos 3D salvos
+  if (/\b(listar projetos|ver projetos|meus projetos)\b/.test(t)) {
+    if (!memoria.projetos3D.length) return "Você não tem nenhum projeto 3D salvo, Mestre!";
+    return "Seus projetos 3D:<br>" + memoria.projetos3D.map((p, i) => `<br>${i + 1}. <b>${esc(p.nome)}</b> (${p.data}) - ${p.objetos.length} objeto(s)`).join("") + "<br><br><i>Diga 'abrir projeto 1' para carregar.</i>";
+  }
+  m = t.match(/\b(?:abrir|carregar) projeto (\d+)/);
+  if (m) { const p = carregarProjeto3D(parseInt(m[1]) - 1); return p ? `Projeto <b>${esc(p.nome)}</b> carregado!` : "Não achei esse projeto, Mestre."; }
+
+  // Google
+  m = orig.match(/\b(?:pesquis\w+|busc\w+|procur\w+)\s+(.+?)\s+(?:no|na)\s+(?:google|internet|web)\b/i) || orig.match(/\bgoogle(?:ar)?\s+(.+)/i);
+  if (m) { window.open("https://www.google.com/search?q=" + encodeURIComponent(m[1]), "_blank"); return `Pesquisando <b>${esc(m[1])}</b> no Google para você, Mestre!`; }
+
+  // Abrir site
+  m = orig.match(/\b(?:abrir?|abre|acessar?|acessa|ir para|va para|vai para|entrar (?:no|na))\s+(?:o |a |no |na )?(?:site |pagina )?([\w.\-\/:]+)/i);
+  if (m && !/^(projeto|tarefa|3d)/i.test(m[1])) { executarAberturaSite(m[1]); return null; }
+
+  // Aprendizado gerenciado
+  if (/\b(o que voce sabe|o que aprendeu|o que eu te ensinei|listar conhecimentos)\b/.test(t)) {
+    if (!memoria.conhecimentos.length) return "Ainda não aprendi nada com você, Mestre. Diga <i>'quero te ensinar'</i>!";
+    return "Aprendi com você:<br>" + memoria.conhecimentos.map(c => `<br>• <b>${esc(c.pergunta)}</b> → ${esc(c.resposta)}`).join("");
+  }
+  m = t.match(/\b(?:esquecer|esquece|apagar conhecimento)\s+(.+)/);
+  if (m) {
+    const antes = memoria.conhecimentos.length;
+    memoria.conhecimentos = memoria.conhecimentos.filter(c => similaridade(c.pergunta, m[1]) < 0.75);
+    salvarMemoria();
+    return antes !== memoria.conhecimentos.length ? "Pronto, esqueci isso, Mestre!" : "Não encontrei esse conhecimento na memória.";
+  }
+  return undefined;
+}
+
+function buscarConhecimento(txt) {
+  let melhor = null, s = 0;
+  const alvo = normalizar(txt);
+  for (const it of memoria.conhecimentos) {
+    const sim = similaridade(it.pergunta, alvo);
+    if (sim > s) { s = sim; melhor = it; }
+  }
+  return s >= 0.82 ? melhor : null;
+}
+
+/* ================= CÉREBRO ================= */
+async function pensar(msg) {
+  const orig = msg.trim();
+  const t = normalizar(orig);
+
+  if (orig.startsWith("/abrir ")) { const u = orig.slice(7).trim(); if (u) { executarAberturaSite(u); return null; } }
+
+  if (/\b01110100\b/.test(t) || /\b(ativar|abrir|ligar|entrar no)?\s*modo 3d\b/.test(t)) { ativarModo3D(); return null; }
+
+  if (modo3DAtivo && interpretarVozPara3D(orig)) return null;
+
+  const conhecido = buscarConhecimento(orig);
+  if (conhecido) return esc(conhecido.resposta);
+
+  const cmd = comandos(orig, t);
+  if (cmd !== undefined) return cmd;
+
+  const conta = calcular(orig);
+  if (conta) return conta;
+
+  const it = classificar(orig);
+  if (it) {
+    // Perguntas factuais explícitas vão para pesquisa, mesmo com palavra de intenção
+    const factual = /^(o que (e|sao)|quem (e|foi|sao)|me fale sobre|explique)\b/.test(t) && t.split(" ").length > 3;
+    if (!factual) {
+      ctx.ultimoTema = it.tema || it.id;
+      return it.r();
+    }
+  }
+
+  // Continuação de contexto: "e sobre isso?", "fale mais"
+  if (/\b(fale mais|continue|mais detalhes|conte mais|e sobre isso)\b/.test(t) && ctx.ultimoTema) {
+    const mais = await pesquisarNaWeb(ctx.ultimoTema + " história");
+    if (mais) return mais;
+  }
+
+  const web = await pesquisarNaWeb(orig);
+  if (web) return web;
+
+  return rnd([
+    "Hmm, não encontrei isso na web nem na minha memória, Mestre. Pode reformular? Ou diga <i>'quero te ensinar'</i> e eu aprendo!",
+    "Não entendi muito bem, Mestre. Tente outras palavras ou digite <i>'ajuda'</i> para ver o que sei fazer.",
+    "Essa eu ainda não sei! Me ensine com <i>'quero te ensinar'</i> e da próxima vez eu respondo."
+  ]);
+}
+
+async function enviar() {
+  const msg = inputEl.value.trim();
+  if (!msg) return;
+  escrever(msg, "user");
+  inputEl.value = "";
+  const t = normalizar(msg);
+
+  if (modoAprendizado) {
+    if (/^(cancelar|cancela|deixa|esquece)$/.test(t)) { modoAprendizado = false; etapaAprendizado = 0; jadeDiz("Cancelei o aprendizado, Mestre."); return; }
+    if (etapaAprendizado === 1) {
+      perguntaTemp = msg; etapaAprendizado = 2;
+      jadeDiz(`Entendido! E o que devo responder quando me disserem "${esc(perguntaTemp)}"?`, `Entendido! E o que devo responder quando me disserem ${perguntaTemp}?`);
+      return;
+    }
+    if (etapaAprendizado === 2) {
+      const ex = memoria.conhecimentos.find(i => similaridade(i.pergunta, perguntaTemp) > 0.9);
+      if (ex) ex.resposta = msg; else memoria.conhecimentos.push({ pergunta: perguntaTemp.toLowerCase().trim(), resposta: msg });
+      salvarMemoria();
+      modoAprendizado = false; etapaAprendizado = 0; perguntaTemp = "";
+      jadeDiz("Perfeito, Mestre! Aprendi! Mesmo que você escreva de um jeito parecido, eu vou entender.", "Perfeito, Mestre! Aprendi!");
+      return;
+    }
+  }
+
+  if (/\b(ensinar|quero te ensinar|vou te ensinar|aprender)\b/.test(t) && !/\b(sabe|aprendeu)\b/.test(t)) {
+    modoAprendizado = true; etapaAprendizado = 1;
+    jadeDiz("Com certeza, Mestre! Qual pergunta ou frase eu devo aprender? (digite <i>cancelar</i> para sair)", "Com certeza, Mestre! Qual pergunta ou frase eu devo aprender?");
+    return;
+  }
+
+  ctx.msgs++;
+  const pensando = escrever("<span class='digitando'>digitando...</span>", "jade");
+  let resposta;
+  try { resposta = await pensar(msg); } catch (e) { resposta = "Tive um pequeno erro interno, Mestre. Pode repetir?"; }
+  pensando.remove();
+  if (resposta) { escrever(resposta, "jade"); falar(resposta); }
+}
+
+/* ================= RECONHECIMENTO DE VOZ ================= */
+function iniciarGravacao(e) {
+  if (e) e.preventDefault();
+  const S = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!S) { alert("Seu navegador não suporta reconhecimento de voz."); return; }
+  if (gravacaoAtiva) return;
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  rec = new S(); rec.lang = "pt-BR"; rec.continuous = true; rec.interimResults = true;
+  rec.onstart = () => { gravacaoAtiva = true; btnMic.classList.add("recording"); };
+  rec.onresult = ev => {
+    let s = ""; for (let i = 0; i < ev.results.length; i++) s += ev.results[i][0].transcript;
+    inputEl.value = s;
+  };
+  rec.onerror = () => pararGravacao();
+  rec.start();
+}
+function pararGravacao(e) {
+  if (e) e.preventDefault();
+  if (!gravacaoAtiva) return;
+  gravacaoAtiva = false; btnMic.classList.remove("recording");
+  if (rec) { rec.stop(); setTimeout(() => { if (inputEl.value.trim()) enviar(); }, 400); }
+}
+
+if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+
+/* ================= INÍCIO ================= */
+renderChips();
+escrever(`<b>Jade:</b> ${saudacaoHora()}, ${chamar()}! Eu sou a Jade 2.0.<br>
+• <b>V</b> dados do ambiente · <b>M</b> abrir site · <b>T</b> Modo 3D · <b>N</b> voltar · segure <b>C</b> para falar.<br>
+Agora eu entendo frases naturais, erros de digitação e lembro do que você me ensina. Diga <i>"ajuda"</i> para ver tudo!`, "jade", true);
 </script>
-
 </body>
 </html>
