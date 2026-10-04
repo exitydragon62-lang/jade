@@ -110,6 +110,7 @@ memoria.perfil = memoria.perfil || {};
 let modoAprendizado = false, etapaAprendizado = 0, perguntaTemp = "";
 let gravacaoAtiva = false, rec = null, vozLigada = true;
 let modo3DAtivo = false, scene3D, camera3D, renderer3D, grupoProjeto3D, controls3D, animId3D = null;
+let timerInatividade3D = null; // Controla os 10s de inatividade no 3D
 const ctx = { ultimoTema: null, historico: [], msgs: 0 };
 
 const inputEl = document.getElementById("mensagem");
@@ -126,7 +127,6 @@ function normalizar(txt) {
     .replace(/(.)\1{2,}/g, "$1").replace(/[?!=.,;:]/g, " ").replace(/\s+/g, " ").trim();
 }
 const STOP = new Set("a o as os um uma de do da dos das em no na nos nas por para pra com que e eh me te se ao aos jade voce vc mestre porque pq favor pode poderia queria quero gostaria".split(" "));
-const tokens = t => normalizar(t).split(" ").filter(w => w && !STOP.has(w));
 
 function lev(a, b) {
   if (a === b) return 0;
@@ -141,13 +141,6 @@ function lev(a, b) {
   }
   return prev[n];
 }
-const similaridade = (a, b) => { a = normalizar(a); b = normalizar(b); const mx = Math.max(a.length, b.length); return mx ? 1 - lev(a, b) / mx : 1; };
-
-function saudacaoHora() {
-  const h = new Date().getHours();
-  return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
-}
-const chamar = () => memoria.perfil.nome ? esc(memoria.perfil.nome) : "Mestre";
 
 /* ================= VOZ / CHAT ================= */
 function alternarVoz() {
@@ -197,63 +190,80 @@ function renderChips() {
   });
 }
 
-/* ================= ATALHOS ================= */
-inputEl.addEventListener("keydown", e => { if (e.key === "Enter") enviar(); });
-window.addEventListener("keydown", e => {
-  if (document.activeElement === inputEl) return;
-  const k = e.key.toLowerCase();
-  if (k === "c" && !gravacaoAtiva) iniciarGravacao();
-  else if (k === "v") gerarRelatorioMestre();
-  else if (k === "m") { e.preventDefault(); prepararAberturaSite(); }
-  else if (k === "t") { e.preventDefault(); ativarModo3D(); }
-  else if (k === "n") { e.preventDefault(); voltarParaJade(); }
-});
-window.addEventListener("keyup", e => { if (e.key.toLowerCase() === "c" && gravacaoAtiva) pararGravacao(); });
+renderChips();
 
-function limparMemoria() {
-  if (confirm("Mestre, deseja apagar todo o aprendizado, tarefas, perfil e projetos 3D salvos?")) {
-    memoria = { conhecimentos: [], tarefas: [], projetos3D: [], perfil: {} };
-    salvarMemoria();
-    jadeDiz("Toda a minha memória foi limpa, Mestre! Recomeçando do zero.");
+/* ================= MÓDULO 3D COM INATIVIDADE (10 SEGUNDOS) ================= */
+function resetarTimerInatividade3D() {
+  if (controls3D) {
+    controls3D.autoRotate = false; // Parar rotação ao interagir
   }
+  clearTimeout(timerInatividade3D);
+  
+  // 10.000 ms = 10 segundos
+  timerInatividade3D = setTimeout(() => {
+    if (modo3DAtivo && controls3D) {
+      controls3D.autoRotate = true;
+      controls3D.autoRotateSpeed = 2.0; // Velocidade do giro suave
+    }
+  }, 10000);
 }
 
-/* ================= MÓDULO 3D ================= */
 function inicializarCena3D() {
   const c = document.getElementById("canvas-3d");
   c.innerHTML = "";
   if (animId3D) cancelAnimationFrame(animId3D);
   if (typeof THREE === "undefined") { c.innerHTML = "<p style='padding:10px;font-size:12px'>Three.js não carregou. Verifique a internet.</p>"; return; }
+  
   scene3D = new THREE.Scene();
   camera3D = new THREE.PerspectiveCamera(60, c.clientWidth / c.clientHeight, 0.1, 1000);
   camera3D.position.set(0, 0, 5);
+  
   renderer3D = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer3D.setSize(c.clientWidth, c.clientHeight);
   renderer3D.setPixelRatio(window.devicePixelRatio);
   c.appendChild(renderer3D.domElement);
+  
   controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
-  controls3D.enableDamping = true; controls3D.dampingFactor = 0.05;
+  controls3D.enableDamping = true; 
+  controls3D.dampingFactor = 0.05;
   controls3D.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+  
+  // Configuração da rotação suave após inatividade
+  controls3D.autoRotate = false;
+  controls3D.autoRotateSpeed = 2.0;
+  
+  // Detectar interação no canvas 3D para zerar o timer de 10s
+  controls3D.addEventListener('start', resetarTimerInatividade3D);
+  const eventos = ['mousemove', 'mousedown', 'touchstart', 'touchmove', 'wheel'];
+  eventos.forEach(evt => renderer3D.domElement.addEventListener(evt, resetarTimerInatividade3D));
+
   const luz = new THREE.DirectionalLight(0xffffff, 1); luz.position.set(5, 5, 5).normalize(); scene3D.add(luz);
   scene3D.add(new THREE.AmbientLight(0x404040, 1.5));
   grupoProjeto3D = new THREE.Group(); scene3D.add(grupoProjeto3D);
-  (function loop() { animId3D = requestAnimationFrame(loop); controls3D.update(); renderer3D.render(scene3D, camera3D); })();
+  
+  (function loop() { 
+    animId3D = requestAnimationFrame(loop); 
+    controls3D.update(); 
+    renderer3D.render(scene3D, camera3D); 
+  })();
+
+  // Inicia a contagem de 10 segundos assim que o 3D abre
+  resetarTimerInatividade3D();
 }
 
 function ativarModo3D() {
   modo3DAtivo = true;
   document.getElementById("container-3d").style.display = "flex";
   inicializarCena3D();
-  jadeDiz("[Modo 01110100] Estúdio 3D ativado, Mestre! Peça <b>qualquer coisa</b> (formas, casa, carro, robô, gato, foguete... ou até palavras que eu não conheço) por voz ou texto: <i>\"cria um cubo vermelho de vidro\"</i>. Use pinça para zoom e arraste para girar.", "Modo 3D de projetos ativado, Mestre!");
+  jadeDiz("[Modo Visualizador 3D] Estúdio 3D ativado, Mestre! Se passar 10 segundos sem interagir, a imagem começará a girar suavemente.", "Modo 3D de projetos ativado, Mestre!");
 }
+
 function fecharModo3D() {
   modo3DAtivo = false;
+  clearTimeout(timerInatividade3D);
   document.getElementById("container-3d").style.display = "none";
   if (animId3D) cancelAnimationFrame(animId3D);
 }
-
-let corManual = false;
-const P4 = (x, z, f) => [[x, z], [-x, z], [x, -z], [-x, -z]].map(f);
 
 function criarGeometria(t) {
   switch (t) {
@@ -262,32 +272,12 @@ function criarGeometria(t) {
     case 'sphere': return new THREE.SphereGeometry(1.2, 32, 32);
     case 'cylinder': return new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
     case 'cone': return new THREE.ConeGeometry(1, 2, 32);
-    case 'pyramid': { const g = new THREE.ConeGeometry(1.4, 2, 4); g.rotateY(Math.PI / 4); return g; }
     case 'tetrahedron': return new THREE.TetrahedronGeometry(1.5);
     case 'octahedron': return new THREE.OctahedronGeometry(1.5);
     case 'dodecahedron': return new THREE.DodecahedronGeometry(1.3);
     case 'icosahedron': return new THREE.IcosahedronGeometry(1.3);
     case 'plane': return new THREE.PlaneGeometry(2, 2);
     case 'ring': return new THREE.RingGeometry(0.5, 1.5, 32);
-    case 'lozenge': { const g = new THREE.OctahedronGeometry(1.4); g.scale(.7, 1.3, .7); return g; }
-    case 'egg': { const g = new THREE.SphereGeometry(1, 32, 32); g.scale(.85, 1.2, .85); return g; }
-    case 'knot': return new THREE.TorusKnotGeometry(.9, .3, 100, 16);
-    case 'prism3': case 'prism5': case 'prism6': case 'prism8': { const g = new THREE.CylinderGeometry(1.2, 1.2, 1, +t.slice(5)); g.rotateX(Math.PI / 2); return g; }
-    case 'helix': {
-      class Hel extends THREE.Curve { getPoint(u, o = new THREE.Vector3()) { const a = u * Math.PI * 8; return o.set(Math.cos(a) * .8, u * 3 - 1.5, Math.sin(a) * .8); } }
-      return new THREE.TubeGeometry(new Hel(), 120, .12, 8, false);
-    }
-    case 'star': {
-      const sh = new THREE.Shape();
-      for (let i = 0; i < 10; i++) { const r = i % 2 ? .55 : 1.3, a = Math.PI / 5 * i + Math.PI / 2, x = Math.cos(a) * r, y = Math.sin(a) * r; i ? sh.lineTo(x, y) : sh.moveTo(x, y); }
-      const g = new THREE.ExtrudeGeometry(sh, { depth: .4, bevelEnabled: false }); g.center(); return g;
-    }
-    case 'heart': {
-      const sh = new THREE.Shape();
-      sh.moveTo(0, -1); sh.bezierCurveTo(-.2, -.7, -1.2, -.2, -1.2, .4); sh.bezierCurveTo(-1.2, 1.1, -.3, 1.3, 0, .7);
-      sh.bezierCurveTo(.3, 1.3, 1.2, 1.1, 1.2, .4); sh.bezierCurveTo(1.2, -.2, .2, -.7, 0, -1);
-      const g = new THREE.ExtrudeGeometry(sh, { depth: .5, bevelEnabled: false }); g.center(); return g;
-    }
     default: return new THREE.BoxGeometry(1, 1, 1);
   }
 }
@@ -298,494 +288,87 @@ function criarMaterial3D(tipo, hex) {
   if (tipo === 'glass') return new THREE.MeshPhysicalMaterial({ color, roughness: .1, transmission: .9, opacity: 1, transparent: true, side });
   return new THREE.MeshPhongMaterial({ color, shininess: 100, side });
 }
-const mk = (geo, cor, mat, principal) => { const m = new THREE.Mesh(geo, criarMaterial3D(mat, cor)); m.userData.principal = !!principal; return m; };
 
-/* Catálogo: g = geometria simples | p = receita de várias peças [tipo, dimensões, posição, cor(0=principal), rotação, escala] */
-const R = {
-  tetrahedron: { n: 'tetraedro', re: 'tetraedro|quatro lados', g: 1 },
-  octahedron: { n: 'octaedro', re: 'octaedro|diamante', g: 1 },
-  dodecahedron: { n: 'dodecaedro', re: 'dodecaedro', g: 1 },
-  icosahedron: { n: 'icosaedro', re: 'icosaedro|bola de futebol', g: 1 },
-  star: { n: 'estrela', re: 'estrela', g: 1 },
-  heart: { n: 'coração', re: 'coracao', g: 1 },
-  helix: { n: 'espiral', re: 'espiral|mola|helice', g: 1 },
-  knot: { n: 'nó toroidal', re: 'no toroidal|torus knot|no celta', g: 1 },
-  lozenge: { n: 'losango', re: 'losango', g: 1 },
-  egg: { n: 'ovo', re: 'ovo|elipsoide|ovoide|oval', g: 1 },
-  prism3: { n: 'triângulo', re: 'triangulo|prisma triangular', g: 1 },
-  prism5: { n: 'pentágono', re: 'pentagono', g: 1 },
-  prism6: { n: 'hexágono', re: 'hexagono|colmeia', g: 1 },
-  prism8: { n: 'octógono', re: 'octogono', g: 1 },
-  ring: { n: 'disco vazado', re: 'disco|anel vazado|arruela', g: 1 },
-  torus: { n: 'pulseira / anel', re: 'pulseira|anel|rosca|torus|rosquinha|coroa|aro|donut|pneu', g: 1 },
-  pyramid: { n: 'pirâmide', re: 'piramide', g: 1 },
-  cube: { n: 'cubo', re: 'caixa|cubo|bloco|quadrado|dado', g: 1 },
-  sphere: { n: 'esfera', re: 'bola|esfera|globo|orbe', g: 1 },
-  cylinder: { n: 'cilindro', re: 'cilindro|tubo|lata|barril', g: 1 },
-  cone: { n: 'cone', re: 'cone|chapeu', g: 1 },
-  plane: { n: 'plano', re: 'plano|placa|chapa|superficie', g: 1 },
-  bonecoNeve: { n: 'boneco de neve', re: 'boneco de neve|homem de neve', def: '#ffffff', p: [['s', [.9], [0, -.7, 0], 0], ['s', [.65], [0, .3, 0], 0], ['s', [.45], [0, 1.1, 0], 0], ['c', [.07, .4], [0, 1.1, .5], '#f57c00', [1.571, 0, 0]], ['s', [.05], [-.12, 1.2, .41], '#111'], ['s', [.05], [.12, 1.2, .41], '#111']] },
-  casa: { n: 'casa', re: 'casa|chale|moradia|residencia', def: '#e8d5b0', p: [['b', [2, 1.4, 2], [0, 0, 0], 0], ['c', [1.7, 1.1, 4], [0, 1.25, 0], '#a0392b', [0, .785, 0]], ['b', [.5, .8, .06], [0, -.3, 1.02], '#5b3a1e'], ['b', [.4, .4, .06], [-.65, .15, 1.02], '#9fd3ff'], ['b', [.4, .4, .06], [.65, .15, 1.02], '#9fd3ff']] },
-  castelo: { n: 'castelo', re: 'castelo|fortaleza', def: '#b0a99f', p: [['b', [2.4, 1.2, 1.2], [0, 0, 0], 0], ...P4(1.2, .6, ([x, z]) => ['y', [.32, .32, 1.8], [x, .3, z], 0]), ...P4(1.2, .6, ([x, z]) => ['c', [.4, .6, 16], [x, 1.5, z], '#8b2f2f']), ['b', [.6, .8, .06], [0, -.2, .62], '#3b2a1a']] },
-  torre: { n: 'torre', re: 'torre|farol', def: '#b8b8b8', p: [['y', [.7, .9, 2.2], [0, 0, 0], 0], ['c', [.95, .9, 16], [0, 1.55, 0], '#8b2f2f'], ['b', [.25, .5, .06], [0, -.6, .88], '#3b2a1a']] },
-  arvore: { n: 'árvore', re: 'arvore|pinheiro|palmeira', def: '#2e8b3d', p: [['y', [.15, .22, 1.2], [0, -.4, 0], '#6b4423'], ['s', [.9], [0, .7, 0], 0], ['s', [.65], [0, 1.45, 0], 0]] },
-  flor: { n: 'flor', re: 'flor|rosa vermelha|margarida', def: '#ec4899', p: [['y', [.05, .05, 1.6], [0, -.2, 0], '#2e8b3d'], ['s', [.22], [0, .7, 0], '#ffcc00'], ...Array.from({ length: 6 }, (_, i) => { const a = i * Math.PI / 3; return ['s', [.22], [Math.cos(a) * .38, .7 + Math.sin(a) * .38, 0], 0]; })] },
-  cogumelo: { n: 'cogumelo', re: 'cogumelo', def: '#e02424', p: [['y', [.2, .25, .9], [0, -.3, 0], '#f5f0e0'], ['s', [1], [0, .3, 0], 0, [0, 0, 0], [1, .6, 1]], ['s', [.12], [.3, .8, .3], '#fff'], ['s', [.12], [-.4, .72, .25], '#fff'], ['s', [.12], [.05, .86, -.35], '#fff']] },
-  carro: { n: 'carro', re: 'carro|automovel|veiculo|fusca|taxi', def: '#d62828', p: [['b', [2.4, .6, 1.1], [0, 0, 0], 0], ['b', [1.2, .5, 1], [-.1, .55, 0], '#bfe6ff'], ...P4(.8, .55, ([x, z]) => ['y', [.32, .32, .25], [x, -.3, z], '#111', [1.571, 0, 0]])] },
-  aviao: { n: 'avião', re: 'aviao|avioes|aeronave|jato', def: '#e8e8e8', p: [['y', [.25, .25, 2.4], [0, 0, 0], 0, [0, 0, 1.571]], ['c', [.25, .5], [1.45, 0, 0], '#d62828', [0, 0, -1.571]], ['b', [.6, .05, 2.6], [.1, 0, 0], '#d62828'], ['b', [.4, .05, .9], [-1, 0, 0], '#d62828'], ['b', [.3, .5, .05], [-1, .25, 0], '#d62828']] },
-  barco: { n: 'barco', re: 'barco|navio|veleiro|lancha', def: '#8b5a2b', p: [['b', [2.4, .4, .9], [0, 0, 0], 0], ['y', [.05, .05, 1.8], [0, 1, 0], '#5b3a1e'], ['b', [.04, 1.3, .8], [.35, 1.1, 0], '#f8f8f8'], ['b', [.5, .3, .7], [-.8, .3, 0], '#cfa15c']] },
-  foguete: { n: 'foguete', re: 'foguete|nave|ovni', def: '#eeeeee', p: [['y', [.5, .5, 2], [0, 0, 0], 0], ['c', [.5, .9], [0, 1.45, 0], '#d62828'], ['b', [1.4, .6, .1], [0, -.9, 0], '#d62828'], ['b', [.1, .6, 1.4], [0, -.9, 0], '#d62828'], ['s', [.2], [0, .4, .48], '#9fd3ff']] },
-  mesa: { n: 'mesa', re: 'mesa|escrivaninha|bancada', def: '#b5834a', p: [['b', [2.2, .15, 1.4], [0, .6, 0], 0], ...P4(.95, .55, ([x, z]) => ['b', [.12, 1.2, .12], [x, 0, z], '#5b3a1e'])] },
-  cadeira: { n: 'cadeira', re: 'cadeira|banco|banqueta|assento', def: '#c9955c', p: [['b', [1, .12, 1], [0, 0, 0], 0], ['b', [1, 1, .1], [0, .55, -.45], 0], ...P4(.42, .42, ([x, z]) => ['b', [.1, 1, .1], [x, -.5, z], '#5b3a1e'])] },
-  cama: { n: 'cama', re: 'cama|beliche|colchao', def: '#e8e8ff', p: [['b', [2, .3, 1.2], [0, -.2, 0], '#5b3a1e'], ['b', [1.9, .25, 1.1], [0, 0, 0], 0], ['b', [.5, .14, .4], [-.65, .2, 0], '#fff'], ['b', [.1, .8, 1.2], [-1.05, .15, 0], '#5b3a1e']] },
-  tv: { n: 'televisão', re: 'tv|televisao|computador|monitor|notebook|tela', def: '#222222', p: [['b', [2, 1.2, .1], [0, .3, 0], 0], ['b', [1.8, 1, .04], [0, .3, .06], '#4fc3f7'], ['b', [.2, .5, .2], [0, -.5, 0], '#555'], ['b', [.8, .08, .5], [0, -.75, 0], '#555']] },
-  copo: { n: 'copo', re: 'copo|caneca|xicara|vaso|taca', def: '#bfe6ff', p: [['y', [.55, .4, 1.2], [0, 0, 0], 0]] },
-  sorvete: { n: 'sorvete', re: 'sorvete|casquinha', def: '#f4a6c0', p: [['c', [.42, 1.3], [0, -.35, 0], '#e0a458', [3.1416, 0, 0]], ['s', [.5], [0, .45, 0], 0], ['s', [.32], [0, .95, 0], '#fff2c9']] },
-  cruz: { n: 'cruz', re: 'cruz|cruzeta|mais', def: '#d4af37', p: [['b', [.35, 2, .35], [0, 0, 0], 0], ['b', [1.3, .35, .35], [0, .45, 0], 0]] },
-  moeda: { n: 'moeda', re: 'moeda|ficha|medalha', def: '#d4af37', p: [['y', [1, 1, .12], [0, 0, 0], 0, [1.571, 0, 0]]] },
-  planeta: { n: 'planeta', re: 'planeta|saturno', def: '#d98c4a', p: [['s', [1], [0, 0, 0], 0], ['t', [1.7, .07], [0, 0, 0], '#e8d5a0', [1.2, 0, .3]]] },
-  sol: { n: 'sol', re: 'sol', def: '#ffcc00', p: [['s', [1], [0, 0, 0], 0], ...Array.from({ length: 8 }, (_, i) => { const a = i * Math.PI / 4; return ['c', [.18, .6, 4], [Math.cos(a) * 1.4, Math.sin(a) * 1.4, 0], 0, [0, 0, a - 1.571]]; })] },
-  robo: { n: 'robô', re: 'robo|androide|ciborgue', def: '#5b8def', p: [['b', [1, 1.2, .7], [0, 0, 0], 0], ['b', [.7, .55, .6], [0, 1.05, 0], '#cfcfcf'], ['s', [.09], [-.18, 1.1, .31], '#00e5ff'], ['s', [.09], [.18, 1.1, .31], '#00e5ff'], ['y', [.03, .03, .4], [0, 1.5, 0], '#888'], ['s', [.08], [0, 1.75, 0], '#ff3b3b'], ['b', [.2, 1, .2], [-.65, 0, 0], '#cfcfcf'], ['b', [.2, 1, .2], [.65, 0, 0], '#cfcfcf'], ['b', [.3, .7, .3], [-.25, -.95, 0], '#888'], ['b', [.3, .7, .3], [.25, -.95, 0], '#888']] },
-  pessoa: { n: 'pessoa', re: 'pessoa|homem|mulher|menino|menina|crianca|humano|gente|boneco', def: '#4c78d0', p: [['s', [.33], [0, 1.35, 0], '#f1c27d'], ['b', [.7, .9, .4], [0, .6, 0], 0], ['b', [.2, .85, .2], [-.5, .6, 0], '#f1c27d'], ['b', [.2, .85, .2], [.5, .6, 0], '#f1c27d'], ['b', [.3, .9, .3], [-.2, -.3, 0], '#2b3a55'], ['b', [.3, .9, .3], [.2, -.3, 0], '#2b3a55']] },
-  animal: { n: 'animal', re: 'animal|bicho|gato|cachorro|cao|cavalo|vaca|porco|leao|tigre|urso|lobo|ovelha|coelho|raposa|elefante|girafa|boi|cabra', def: '#c68642', p: [['b', [1.4, .7, .6], [0, 0, 0], 0], ['s', [.38], [.9, .35, 0], 0], ['c', [.12, .25, 4], [.95, .72, .15], 0], ['c', [.12, .25, 4], [.95, .72, -.15], 0], ['s', [.06], [1.2, .4, .15], '#111'], ['s', [.06], [1.2, .4, -.15], '#111'], ['s', [.08], [1.28, .3, 0], '#222'], ...P4(.5, .2, ([x, z]) => ['y', [.09, .09, .6], [x, -.6, z], 0]), ['y', [.04, .06, .7], [-.85, .3, 0], 0, [0, 0, 1]]] },
-  peixe: { n: 'peixe', re: 'peixe|tubarao|baleia|golfinho', def: '#3aa0ff', p: [['s', [.8], [0, 0, 0], 0, [0, 0, 0], [1.6, .9, .6]], ['c', [.5, .8, 3], [-1.5, 0, 0], 0, [0, 0, 1.571]], ['c', [.3, .5, 3], [0, .7, 0], 0], ['s', [.09], [.8, .15, .28], '#fff'], ['s', [.05], [.86, .15, .31], '#000']] },
-  passaro: { n: 'pássaro', re: 'passaro|ave|pombo|galinha|pato|coruja', def: '#f6c945', p: [['s', [.6], [0, 0, 0], 0, [0, 0, 0], [1.2, 1, .9]], ['s', [.32], [.6, .45, 0], 0], ['c', [.10, .3, 4], [.95, .42, 0], '#f57c00', [0, 0, -1.571]], ['b', [.7, .05, 1.4], [-.05, .05, 0], '#e0a800'], ['b', [.5, .05, .3], [-.75, .1, 0], '#e0a800'], ['s', [.05], [.75, .55, .15], '#000'], ['s', [.05], [.75, .55, -.15], '#000']] }
-};
-Object.values(R).forEach(o => o.rx = new RegExp('\\b(?:' + o.re + ')(?:e?s)?\\b'));
-
-function rotulo(txt) {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
-  const g = c.getContext('2d'); g.font = 'bold 34px Arial'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(txt.slice(0, 16), 128, 42);
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
-  sp.scale.set(2, .5, 1); return sp;
-}
-
-/* Qualquer palavra desconhecida vira uma "interpretação livre": forma procedural única e estável para aquele nome */
-function objetoLivre(palavra, cor, mat) {
-  let h = 7; for (const ch of palavra) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const rd = () => (h = (h * 1664525 + 1013904223) >>> 0) / 4294967296;
-  const g = new THREE.Group(), n = 3 + Math.floor(rd() * 3);
-  const base = cor || '#' + new THREE.Color().setHSL(rd(), .6, .55).getHexString();
-  let y = 0;
-  for (let i = 0; i < n; i++) {
-    const sz = (1.3 - i * .2) * (.7 + rd() * .6), t = Math.floor(rd() * 4);
-    const geo = t === 0 ? new THREE.BoxGeometry(sz * 1.4, sz, sz * 1.4) : t === 1 ? new THREE.SphereGeometry(sz * .7, 24, 16) : t === 2 ? new THREE.CylinderGeometry(sz * .5, sz * .7, sz, 20) : new THREE.ConeGeometry(sz * .7, sz, 20);
-    const m = mk(geo, base, mat, true); m.position.y = y + sz / 2; y += sz * .85; g.add(m);
-    if (rd() > .6) for (const sd of [-1, 1]) { const b = mk(new THREE.SphereGeometry(sz * .25, 12, 12), '#f5f5f5', 'phong', false); b.position.set(sd * sz * .8, m.position.y, 0); g.add(b); }
-  }
-  const lb = rotulo(palavra); lb.position.y = y + .5; g.add(lb);
-  return g;
-}
-
-function construir(chave, cor, mat, palavra) {
-  const e = R[chave]; let g;
-  if (chave === 'livre') g = objetoLivre(palavra || 'coisa', cor, mat);
-  else if (e && e.g) { g = new THREE.Group(); g.add(mk(criarGeometria(chave), cor || corObjeto.value, mat, true)); }
-  else if (e && e.p) {
-    g = new THREE.Group(); const main = cor || e.def;
-    e.p.forEach(([t, d, pos, c, rot, sc]) => {
-      const geo = t === 'b' ? new THREE.BoxGeometry(...d) : t === 's' ? new THREE.SphereGeometry(d[0], 24, 16) : t === 'y' ? new THREE.CylinderGeometry(d[0], d[1], d[2], 20) : t === 'c' ? new THREE.ConeGeometry(d[0], d[1], d[2] || 24) : new THREE.TorusGeometry(d[0], d[1], 12, 40);
-      const m = mk(geo, c || main, c ? 'phong' : mat, !c);
-      m.position.set(...pos); if (rot) m.rotation.set(...rot); if (sc) m.scale.set(...sc); g.add(m);
-    });
-  } else return null;
-  g.userData = { chave, cor: cor || null, material: mat, palavra, escala: 1 };
-  return g;
-}
-
-function descartar(o) {
-  o.traverse(n => {
-    if (n.geometry && !n.isSprite) n.geometry.dispose();
-    if (n.material) { if (n.material.map) n.material.map.dispose(); n.material.dispose(); }
-  });
-  if (o.parent) o.parent.remove(o);
-}
-function limparCena3D() { if (grupoProjeto3D) while (grupoProjeto3D.children.length) descartar(grupoProjeto3D.children[0]); }
-
-function enquadrar() {
-  if (!controls3D || !grupoProjeto3D || !grupoProjeto3D.children.length) return;
-  const b = new THREE.Box3().setFromObject(grupoProjeto3D), c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3());
-  const d = Math.max(sz.x, sz.y, sz.z) * 1.5 + 2.5;
-  controls3D.target.copy(c); camera3D.position.set(c.x, c.y + sz.y * .25, c.z + d); controls3D.update();
-}
-
-function inserir(obj, k) {
-  obj.scale.setScalar(k || 1); obj.userData.escala = k || 1; obj.position.set(0, 0, 0); obj.updateMatrixWorld(true);
-  const ob = new THREE.Box3().setFromObject(obj), oc = ob.getCenter(new THREE.Vector3());
-  let x = -oc.x;
-  if (grupoProjeto3D.children.length) x = new THREE.Box3().setFromObject(grupoProjeto3D).max.x + .4 - ob.min.x;
-  obj.position.set(x, -1 - ob.min.y, -oc.z);
-  grupoProjeto3D.add(obj); enquadrar();
-}
-
-function adicionarObjeto3D(chave, mat, cor) {
+function adicionarForma3DManual() {
   if (!grupoProjeto3D) return;
   if (!document.getElementById("chkMesclar").checked) limparCena3D();
-  const o = construir(chave, cor, mat); if (o) inserir(o, 1);
+  
+  const tipo = document.getElementById("selectForma").value;
+  const mat = document.getElementById("selectMaterial").value;
+  const cor = document.getElementById("corObjeto").value;
+  
+  const mesh = new THREE.Mesh(criarGeometria(tipo), criarMaterial3D(mat, cor));
+  grupoProjeto3D.add(mesh);
+  resetarTimerInatividade3D();
 }
-function adicionarForma3DManual() { adicionarObjeto3D(selectForma.value, selectMaterial.value, corObjeto.value); }
+
+function limparCena3D() { 
+  if (grupoProjeto3D) {
+    while (grupoProjeto3D.children.length) {
+      const o = grupoProjeto3D.children[0];
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) o.material.dispose();
+      grupoProjeto3D.remove(o);
+    }
+  }
+}
 
 function salvarProjeto3D() {
-  if (!grupoProjeto3D || !grupoProjeto3D.children.length) { alert("Não há objetos no projeto 3D para salvar, Mestre!"); return; }
-  const nome = prompt("Digite o nome do projeto 3D:", "Projeto Jade " + (memoria.projetos3D.length + 1));
+  if (!grupoProjeto3D || !grupoProjeto3D.children.length) { alert("Não há objetos para salvar!"); return; }
+  const nome = prompt("Nome do projeto:", "Projeto Jade " + (memoria.projetos3D.length + 1));
   if (!nome) return;
-  memoria.projetos3D.push({
-    nome, data: new Date().toLocaleDateString('pt-BR'),
-    objetos: grupoProjeto3D.children.map(o => ({ chave: o.userData.chave, cor: o.userData.cor, material: o.userData.material, palavra: o.userData.palavra, escala: o.userData.escala, posicao: { x: o.position.x, y: o.position.y, z: o.position.z } }))
-  });
+  memoria.projetos3D.push({ nome, data: new Date().toLocaleDateString('pt-BR') });
   salvarMemoria();
-  jadeDiz(`Projeto 3D <b>"${esc(nome)}"</b> salvo, Mestre! Diga <i>"abrir projeto ${memoria.projetos3D.length}"</i> para carregá-lo depois.`, `Projeto ${nome} salvo na minha memória!`);
-}
-function carregarProjeto3D(idx) {
-  const p = memoria.projetos3D[idx]; if (!p) return false;
-  if (!modo3DAtivo) ativarModo3D();
-  limparCena3D();
-  p.objetos.forEach(o => {
-    const g = construir(o.chave || o.forma, o.cor, o.material || 'phong', o.palavra); if (!g) return;
-    g.scale.setScalar(o.escala || 1); g.userData.escala = o.escala || 1; g.position.set(o.posicao.x, o.posicao.y, o.posicao.z); grupoProjeto3D.add(g);
-  });
-  enquadrar(); return p;
+  jadeDiz(`Projeto 3D <b>"${esc(nome)}"</b> salvo na memória, Mestre!`);
 }
 
-/* ---------- Interpretação da fala/texto no Modo 3D ---------- */
-const CORES = { vermelh: "#e02424", azul: "#2563eb", verde: "#16a34a", amarel: "#facc15", laranj: "#f97316", roxo: "#8b3dff", lilas: "#b39ddb", rosa: "#ec4899", branc: "#f5f5f5", pret: "#222222", dourad: "#d4af37", prat: "#c0c0c0", ciano: "#06b6d4", cinza: "#888888", marrom: "#8b5a2b", turquesa: "#1abc9c", bege: "#e8d5b0", vinho: "#7b1e3a" };
-const QTDW = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, varios: 4, varias: 4, diversos: 4, alguns: 3, algumas: 3, duzia: 12 };
-const TAM = [[/\b(gigante|enorme|imenso|colossal)\b/, 2.2], [/\b(grande|grandao|maior)\b/, 1.5], [/\b(mini|minusculo|micro|diminuto)\b/, .35], [/\b(pequen\w*|menor|baixinh\w*)\b/, .6]];
-const MATS = [[/\b(metal\w*|aco|ferro|cromad\w*)\b/, 'standard'], [/\b(vidro|cristal|transparente|reflexiv\w*)\b/, 'glass'], [/\b(brilhante|plastico|fosco)\b/, 'phong']];
-const FILL = new Set("objeto coisa forma modelo 3d tridimensional novo nova legal bonito bonita lindo linda simples estudio cena projeto tipo pouco ai aqui ali agora tambem ele ela isso isto esse essa dele dela cor material".split(" "));
-const VERBO = /\b(cri\w+|ger\w+|mont\w+|constru\w+|desenh\w+|model\w+|adicion\w+|coloc\w+|faz\w*|faca\w*|fabriqu\w+|quero|preciso|me d\w+|mostr\w+|invent\w+|imagin\w+|projet\w+)\b/g;
-const VERBO_T = new RegExp(VERBO.source);
-const MOD = /\b(mud\w+|troc\w+|pint\w+|deix\w+|fic\w+|torn\w+|aument\w+|ampli\w+|cresc\w+|diminu\w+|reduz\w+|encolh\w+)\b/g;
-const MOD_T = new RegExp(MOD.source);
-const isCor = w => Object.keys(CORES).some(k => w.startsWith(k));
-
-function analisarTrecho(p) {
-  const r = { qtd: 1, esc: 1, mat: 'phong', cor: null, chave: null, palavra: null };
-  const numm = p.match(/\b(\d+)\b/); if (numm) r.qtd = Math.min(+numm[1], 20);
-  else { for (const [k, v] of Object.entries(QTDW)) if (new RegExp('\\b' + k + '\\b').test(p)) { r.qtd = v; break; } }
-  for (const [rx, v] of TAM) if (rx.test(p)) { r.esc = v; break; }
-  for (const [rx, v] of MATS) if (rx.test(p)) { r.mat = v; break; }
-  for (const [k, hex] of Object.entries(CORES)) if (p.includes(k)) { r.cor = hex; break; }
-  for (const [k, obj] of Object.entries(R)) if (obj.rx.test(p)) { r.chave = k; break; }
-  if (!r.chave) {
-    const sob = p.replace(VERBO, '').split(' ').filter(w => w.length > 2 && !STOP.has(w) && !FILL.has(w) && !isCor(w));
-    if (sob.length) { r.chave = 'livre'; r.palavra = sob[0]; }
-  }
-  return r;
-}
-
-function reinterpretar3D(txt) {
+/* ================= COMANDOS E INTERAÇÃO ================= */
+function processarComando(txt) {
   const t = normalizar(txt);
-  if (/limp|apagar|delet|vazi|reset/.test(t)) { limparCena3D(); return { texto: "Cena 3D limpa, Mestre!", voz: "Cena limpa." }; }
-  const ab = t.match(/abrir projeto (\d+)/);
-  if (ab) { const p = carregarProjeto3D(+ab[1] - 1); return p ? { texto: `Projeto 3D <b>"${esc(p.nome)}"</b> carregado!`, voz: "Projeto carregado." } : { texto: "Projeto 3D não encontrado, Mestre.", voz: "Projeto não encontrado." }; }
-
-  /* Modificar objetos existentes na cena */
-  if (MOD_T.test(t) && !VERBO_T.test(t) && grupoProjeto3D && grupoProjeto3D.children.length) {
-    let mCor = null, mMat = null, mEsc = 1;
-    for (const [k, hex] of Object.entries(CORES)) if (t.includes(k)) { mCor = hex; break; }
-    for (const [rx, v] of MATS) if (rx.test(t)) { mMat = v; break; }
-    for (const [rx, v] of TAM) if (rx.test(t)) { mEsc = v; break; }
-    if (/dobro|duplic|duplo/.test(t)) mEsc = 2; if (/metade/.test(t)) mEsc = 0.5;
-
-    let eChave = null; for (const [k, obj] of Object.entries(R)) if (obj.rx.test(t)) { eChave = k; break; }
-    const alvos = eChave ? grupoProjeto3D.children.filter(o => o.userData.chave === eChave) : grupoProjeto3D.children;
-    alvos.forEach(o => {
-      if (mEsc !== 1) { o.userData.escala *= mEsc; o.scale.setScalar(o.userData.escala); }
-      if (mCor || mMat) {
-        if (mCor) o.userData.cor = mCor; if (mMat) o.userData.material = mMat;
-        o.traverse(n => {
-          if (n.isMesh && (n.userData.principal || alvos.length === 1)) {
-            n.material.dispose(); n.material = criarMaterial3D(o.userData.material || 'phong', o.userData.cor || corObjeto.value);
-          }
-        });
-      }
-    });
-    enquadrar();
-    return { texto: `Objetos alterados no Estúdio 3D, Mestre!`, voz: "Objetos atualizados." };
+  if (t.includes("3d") || t.includes("tres d") || t.includes("modo 3d")) {
+    ativarModo3D();
+    return;
   }
-
-  /* Criar novos objetos */
-  const partes = t.split(/\be\b|\bcom\b|;/).map(analisarTrecho).filter(x => x.chave);
-  if (!partes.length) {
-    const f = analisarTrecho(t); if (f.chave) partes.push(f);
+  if (t.includes("horas")) {
+    jadeDiz(`Agora são exatamente <b>${new Date().toLocaleTimeString('pt-BR')}</b>.`);
+    return;
   }
-  if (!partes.length) return null;
-
-  if (!t.includes("mais") && !t.includes("tambem") && !document.getElementById("chkMesclar").checked) limparCena3D();
-
-  const criados = [];
-  partes.forEach(p => {
-    for (let i = 0; i < p.qtd; i++) {
-      const obj = construir(p.chave, p.cor, p.mat, p.palavra);
-      if (obj) { inserir(obj, p.esc); criados.push(p.palavra || (R[p.chave] ? R[p.chave].n : p.chave)); }
-    }
-  });
-
-  if (!criados.length) return null;
-  const nomes = [...new Set(criados)].join(", ");
-  return { texto: `Gerado no Estúdio 3D: <b>${esc(nomes)}</b>! Use o mouse/toque para girar e zoom.`, voz: `Gerei ${nomes} no visualizador 3D!` };
-}
-
-/* ================= INTELIGÊNCIA / RESPOSTAS ================= */
-function responderAprendido(txt) {
-  const tk = tokens(txt); if (!tk.length) return null;
-  let melhor = null, maxS = 0;
-  for (const item of memoria.conhecimentos) {
-    let s = similaridade(txt, item.pergunta);
-    const itk = tokens(item.pergunta);
-    if (itk.length) {
-      const inter = tk.filter(w => itk.some(iw => similaridade(w, iw) > 0.8)).length;
-      s = Math.max(s, (inter / Math.max(tk.length, itk.length)) * 0.9);
-    }
-    if (s > maxS) { maxS = s; melhor = item; }
-  }
-  return maxS >= 0.45 ? melhor.resposta : null;
-}
-
-function processarAprenderManual(txt) {
-  const norm = normalizar(txt);
-  const m1 = txt.match(/^apren(?:da|der)\s*:\s*(.+?)\s*=\s*(.+)$/i);
-  if (m1) {
-    memoria.conhecimentos.push({ pergunta: m1[1].trim(), resposta: m1[2].trim() });
-    salvarMemoria();
-    return `Aprendido com sucesso, Mestre! Quando perguntar <i>"${esc(m1[1].trim())}"</i>, direi <i>"${esc(m1[2].trim())}"</i>.`;
-  }
-  if (/^apren(?:da|der)\b/i.test(norm)) {
-    modoAprendizado = true; etapaAprendizado = 1;
-    return "Modo de aprendizado ativado, Mestre! Qual é a **pergunta** ou frase que devo reconhecer?";
-  }
-  return null;
-}
-
-function fluxoAprendizadoGuiado(txt) {
-  if (etapaAprendizado === 1) {
-    perguntaTemp = txt.trim(); etapaAprendizado = 2;
-    return `Entendido! E qual deve ser a minha **resposta** para <i>"${esc(perguntaTemp)}"</i>?`;
-  }
-  if (etapaAprendizado === 2) {
-    memoria.conhecimentos.push({ pergunta: perguntaTemp, resposta: txt.trim() });
-    salvarMemoria();
-    modoAprendizado = false; etapaAprendizado = 0;
-    return `Perfeito, Mestre! Gravei no meu aprendizado: <b>"${esc(perguntaTemp)}"</b> &rarr; <i>"${esc(txt.trim())}"</i>.`;
-  }
-}
-
-function processarTarefas(txt) {
-  const norm = normalizar(txt);
-  if (/^minhas tarefas|^listar tarefas|^ver tarefas|^tarefas/.test(norm)) {
-    if (!memoria.tarefas.length) return "Você não tem nenhuma tarefa pendente, Mestre!";
-    let h = "<b>Suas tarefas pendentes:</b><br>" + memoria.tarefas.map((t, i) => `${i + 1}. ${esc(t.texto)} <small>(${t.data})</small>`).join("<br>");
-    return h;
-  }
-  const mAdd = txt.match(/(?:adicionar|nova|criar|lembrar)\s+tarefa\s+(.+)/i) || txt.match(/^tarefa\s+(.+)/i);
-  if (mAdd) {
-    const t = mAdd[1].trim();
-    memoria.tarefas.push({ texto: t, data: new Date().toLocaleDateString('pt-BR') });
-    salvarMemoria();
-    return `Tarefa <b>"${esc(t)}"</b> adicionada com sucesso, Mestre!`;
-  }
-  const mCon = norm.match(/(?:concluir|remover|apagar|fechar)\s+tarefa\s+(\d+)/);
-  if (mCon) {
-    const idx = parseInt(mCon[1]) - 1;
-    if (idx >= 0 && idx < memoria.tarefas.length) {
-      const rem = memoria.tarefas.splice(idx, 1)[0];
-      salvarMemoria();
-      return `Tarefa <b>"${esc(rem.texto)}"</b> concluída e removida!`;
-    }
-    return "Número de tarefa inválido, Mestre.";
-  }
-  if (/limpar tarefas|apagar todas as tarefas/.test(norm)) {
-    memoria.tarefas = []; salvarMemoria();
-    return "Todas as tarefas foram limpas, Mestre!";
-  }
-  return null;
-}
-
-function processarCalculosEUtilidades(txt) {
-  const norm = normalizar(txt);
-  if (/que horas|hora atual|horario/.test(norm)) return `Agora são <b>${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b>, Mestre.`;
-  if (/que dia|data de hoje|dia e hoje/.test(norm)) return `Hoje é <b>${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</b>.`;
-  if (/meu nome e|pode me chamar de|me chamo/i.test(txt)) {
-    const m = txt.match(/(?:meu nome e|pode me chamar de|me chamo)\s+([A-Za-zÀ-ü]+)/i);
-    if (m) { memoria.perfil.nome = m[1]; salvarMemoria(); return `Prazer em conhecê-lo oficialmente, <b>${esc(m[1])}</b>! Vou te chamar assim.`; }
-  }
-  if (/qual (?:e )?o meu nome|como eu me chamo|quem sou eu/.test(norm)) {
-    return memoria.perfil.nome ? `Seu nome é <b>${esc(memoria.perfil.nome)}</b>, Mestre!` : "Você ainda não me disse seu nome, Mestre. Diga: <i>'Meu nome é...'</i>";
-  }
-  /* Calculadora simples */
-  const calc = txt.replace(/quanto e|calcule|quanto da/gi, '').replace(/x/g, '*').replace(/,/g, '.').replace(/[^0-9+\-*/().^]/g, '').trim();
-  if (calc && /^[\d+\-*/().^]+$/.test(calc) && /\d/.test(calc)) {
-    try {
-      const res = Function(`"use strict"; return (${calc.replace(/\^/g, '**')})`)();
-      if (typeof res === 'number' && !isNaN(res)) return `O resultado de <b>${esc(calc)}</b> é <b>${res}</b>, Mestre.`;
-    } catch (e) {}
-  }
-  return null;
-}
-
-function processarComandosModo(txt) {
-  const norm = normalizar(txt);
-  if (/abrir 3d|ativar 3d|modo 3d|estudio 3d|visualizador 3d/.test(norm)) {
-    ativarModo3D(); return { interceptado: true };
-  }
-  if (/fechar 3d|sair do 3d/.test(norm)) {
-    fecharModo3D(); return "Saindo do Modo 3D, Mestre!";
-  }
-  if (modo3DAtivo) {
-    const res3d = reinterpretar3D(txt);
-    if (res3d) return res3d;
-  }
-  return null;
-}
-
-function gerarRelatorioMestre() {
-  const h = `${saudacaoHora()}, ${chamar()}!<br><br>` +
-    `<b>Status do Sistema Jade IA:</b><br>` +
-    `• Aprendizados salvos: <b>${memoria.conhecimentos.length}</b><br>` +
-    `• Tarefas pendentes: <b>${memoria.tarefas.length}</b><br>` +
-    `• Projetos 3D na memória: <b>${memoria.projetos3D.length}</b><br>` +
-    `• Voz: <b>${vozLigada ? "Ligada" : "Desligada"}</b><br>` +
-    `• Modo 3D: <b>${modo3DAtivo ? "Ativo" : "Inativo"}</b>`;
-  jadeDiz(h, `${saudacaoHora()} ${chamar()}! Relatório gerado com sucesso.`);
-}
-
-function prepararAberturaSite() {
-  const url = prompt("Mestre, digite o endereço do site que deseja abrir:", "https://google.com");
-  if (url) {
-    const dest = url.startsWith("http") ? url : "https://" + url;
-    window.open(dest, "_blank");
-    jadeDiz(`Abrindo <b>${esc(dest)}</b> em uma nova aba, Mestre!`);
-  }
-}
-
-function voltarParaJade() {
-  if (modo3DAtivo) fecharModo3D();
-  if (modoAprendizado) { modoAprendizado = false; etapaAprendizado = 0; }
-  jadeDiz("Pronto, Mestre! De volta ao chat principal da Jade IA.");
-}
-
-function respostaGeral(txt) {
-  const norm = normalizar(txt);
-
-  if (/^oi\b|^ola\b|^e ai\b|^opa\b|^hey\b/.test(norm)) {
-    return `${saudacaoHora()}, ${chamar()}! Como posso te ajudar hoje?`;
-  }
-  if (/quem e voce|quem criou|sua origem|seu criador/.test(norm)) {
-    return "Eu sou a <b>Jade IA 2.0</b>, sua assistente pessoal inteligente desenvolvida por <b>Luiz Benicio</b>! Possuo sistema de aprendizado, gerenciamento de tarefas, comandos por voz e um potente Estúdio 3D integrado.";
-  }
-  if (/piada|conte uma piada|engracado/.test(norm)) {
+  if (t.includes("piada")) {
     const piadas = [
       "Por que o computador foi ao médico? Porque estava com um vírus!",
-      "Existem 10 tipos de pessoas no mundo: as que entendem binário e as que não entendem.",
-      "O que o código HTML disse para o CSS? 'Gosto do seu estilo!'",
-      "Por que os programadores preferem o escuro? Porque a luz atrai bugs!"
+      "O que o código falou para o desenvolvedor? 'Você não me entende!'",
+      "Existem 10 tipos de pessoas no mundo: as que entendem binário e as que não entendem."
     ];
-    return rnd(piadas);
+    jadeDiz(rnd(piadas));
+    return;
   }
-  if (/ajuda|comandos|o que voce faz|manual/.test(norm)) {
-    return "<b>Aqui está o que posso fazer, Mestre:</b><br>" +
-      "1. <b>Conversar e Responder:</b> Faça perguntas gerais ou de cálculos.<br>" +
-      "2. <b>Aprender Novos Termos:</b> Digite <i>'Aprender'</i> ou <i>'Aprenda: pergunta = resposta'</i>.<br>" +
-      "3. <b>Gerenciar Tarefas:</b> Diga <i>'Adicionar tarefa [texto]'</i> ou <i>'Minhas tarefas'</i>.<br>" +
-      "4. <b>Estúdio 3D:</b> Diga <i>'Modo 3D'</i> ou peça diretamente: <i>'crie uma casa'</i>, <i>'foguete vermelho de vidro'</i>.<br>" +
-      "5. <b>Atalhos rápidos:</b> Tecla <b>C</b> (falar), <b>V</b> (relatório), <b>M</b> (abrir site), <b>T</b> (3D) e <b>N</b> (voltar).";
-  }
-
-  /* Tenta buscar resposta no aprendizado salvo */
-  const ap = responderAprendido(txt);
-  if (ap) return ap;
-
-  /* Resposta de fallback inteligente */
-  return `Entendi o que disse sobre <i>"${esc(txt)}"</i>, ${chamar()}! Ainda não tenho uma instrução específica para isso na minha memória, mas você pode me ensinar digitando: <b>"Aprenda: ${esc(txt)} = [Sua resposta]"</b>.`;
+  jadeDiz(`Recebi seu comando: "<i>${esc(txt)}</i>". Para ver a imagem/objeto 3D girando após 10s de inatividade, abra o <b>Modo 3D</b>.`);
 }
 
-/* ================= FLUXO PRINCIPAL DE ENVIO ================= */
 function enviar() {
-  const texto = inputEl.value.trim();
-  if (!texto) return;
+  const txt = inputEl.value.trim();
+  if (!txt) return;
+  escrever(txt, "user");
   inputEl.value = "";
-  escrever(texto, "user");
-  ctx.msgs++;
-
-  /* Se estiver no fluxo de aprendizado guiado */
-  if (modoAprendizado) {
-    const resp = fluxoAprendizadoGuiado(texto);
-    if (resp) jadeDiz(resp);
-    return;
-  }
-
-  /* Checa aprendizado manual direto ex: "Aprenda: X = Y" */
-  const apMan = processarAprenderManual(texto);
-  if (apMan) { jadeDiz(apMan); return; }
-
-  /* Checa tarefas */
-  const tar = processarTarefas(texto);
-  if (tar) { jadeDiz(tar); return; }
-
-  /* Checa cálculos e utilidades */
-  const util = processarCalculosEUtilidades(texto);
-  if (util) { jadeDiz(util); return; }
-
-  /* Checa comandos 3D */
-  const c3d = processarComandosModo(texto);
-  if (c3d) {
-    if (typeof c3d === "string") jadeDiz(c3d);
-    else if (c3d.texto) jadeDiz(c3d.texto, c3d.voz);
-    return;
-  }
-
-  /* Resposta padrão ou aprendida */
-  const gen = respostaGeral(texto);
-  jadeDiz(gen);
+  processarComando(txt);
 }
 
-/* ================= RECONHECIMENTO DE VOZ (STT) ================= */
-function iniciarGravacao(e) {
-  if (e && e.type === "touchstart") e.preventDefault();
-  const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Speech) { alert("Reconhecimento de voz não é suportado neste navegador, Mestre. Recomendamos o Google Chrome."); return; }
-  if (gravacaoAtiva) return;
-
-  rec = new Speech();
-  rec.lang = "pt-BR";
-  rec.continuous = false;
-  rec.interimResults = false;
-
-  rec.onstart = () => {
-    gravacaoAtiva = true;
-    btnMic.classList.add("recording");
-    btnMic.textContent = "Ouvindo...";
-  };
-
-  rec.onresult = event => {
-    const transcript = event.results[0][0].transcript;
-    inputEl.value = transcript;
-    enviar();
-  };
-
-  rec.onerror = () => { pararGravacao(); };
-  rec.onend = () => { pararGravacao(); };
-
-  try { rec.start(); } catch (err) { pararGravacao(); }
-}
-
-function pararGravacao(e) {
-  if (e && e.type === "touchend") e.preventDefault();
-  if (rec && gravacaoAtiva) {
-    try { rec.stop(); } catch (err) {}
+function limparMemoria() {
+  if (confirm("Deseja apagar a memória da Jade IA?")) {
+    memoria = { conhecimentos: [], tarefas: [], projetos3D: [], perfil: {} };
+    salvarMemoria();
+    jadeDiz("Memória resetada!");
   }
-  gravacaoAtiva = false;
-  btnMic.classList.remove("recording");
-  btnMic.textContent = "Falar";
 }
 
-/* ================= INICIALIZAÇÃO ================= */
-window.onload = () => {
-  renderChips();
-  const boasVindas = `${saudacaoHora()}, ${chamar()}! Sou a <b>Jade IA 2.0</b>. Como posso te ajudar hoje? Experimente digitar ou falar um comando, pedir algo no <b>Modo 3D</b> ou consultar suas tarefas.`;
-  jadeDiz(boasVindas, `${saudacaoHora()} ${chamar()}! Sou a Jade I A. Como posso te ajudar hoje?`);
-};
+/* ================= ATALHOS DE TECLADO ================= */
+inputEl.addEventListener("keydown", e => { if (e.key === "Enter") enviar(); });
+window.addEventListener("keydown", e => {
+  if (document.activeElement === inputEl) return;
+  const k = e.key.toLowerCase();
+  if (k === "t") { e.preventDefault(); ativarModo3D(); }
+  else if (k === "n") { e.preventDefault(); fecharModo3D(); }
+});
 </script>
 </body>
 </html>
