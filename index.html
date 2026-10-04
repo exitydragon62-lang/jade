@@ -163,7 +163,7 @@ function escrever(texto, remetente, cru, imgUrl) {
 function jadeDiz(html, voz, imgUrl) { escrever(html, "jade", false, imgUrl); falar(voz || html); }
 function renderChips() {
   const box = $("chips"); box.innerHTML = "";
-  ["Que horas são?", "Conte uma piada", "Nova tarefa: ", "Quanto é 12*7+3", "Modo 3D", "Ensinar", "Ajuda"].forEach(s => {
+  ["Que horas são?", "Conte uma piada", "Nova tarefa: ", "Quanto é 12*7+3", "Status", "Modo 3D", "Ensinar", "Ajuda"].forEach(s => {
     const c = document.createElement("button");
     c.type = "button"; c.className = "chip"; c.textContent = s;
     c.onclick = () => { inputEl.value = s; if (s.endsWith(": ")) inputEl.focus(); else enviar(); };
@@ -196,7 +196,27 @@ function prepararAberturaSite() {
   if (!/^https?:\/\//i.test(u)) u = "https://" + u;
   window.open(u, "_blank", "noopener"); jadeDiz("Abrindo o site em outra aba.");
 }
-function gerarRelatorioMestre() {
+const WMO = { 0: "céu limpo", 1: "quase limpo", 2: "parcialmente nublado", 3: "nublado", 45: "neblina", 48: "neblina", 51: "garoa fraca", 53: "garoa", 55: "garoa forte", 61: "chuva fraca", 63: "chuva", 65: "chuva forte", 80: "pancadas de chuva", 81: "pancadas de chuva", 82: "pancadas fortes", 95: "trovoada", 96: "trovoada com granizo", 99: "trovoada com granizo" };
+function gerarRelatorioMestre() { statusRegiao(); }
+function statusRegiao() {
+  if (!navigator.geolocation) return jadeDiz("Seu navegador não permite acessar a localização.");
+  jadeDiz("Verificando como está a sua região...", "Verificando a sua região");
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const la = pos.coords.latitude, lo = pos.coords.longitude;
+    try {
+      const [w, g] = await Promise.all([
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m&daily=precipitation_probability_max,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`).then(r => r.json()),
+        fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${la}&longitude=${lo}&localityLanguage=pt`).then(r => r.json()).catch(() => ({}))
+      ]);
+      const c = w.current, d = w.daily, cond = WMO[c.weather_code] || "tempo variável";
+      const local = [g.city || g.locality, g.principalSubdivision].filter(Boolean).join(" - ") || "sua região";
+      const chuva = d.precipitation_probability_max[0];
+      jadeDiz(`<b>Status de ${esc(local)}</b><br>🌡️ ${Math.round(c.temperature_2m)}°C (sensação ${Math.round(c.apparent_temperature)}°C), ${cond}<br>💧 Umidade ${c.relative_humidity_2m}% · 💨 Vento ${Math.round(c.wind_speed_10m)} km/h<br>📈 Hoje: mín ${Math.round(d.temperature_2m_min[0])}°C, máx ${Math.round(d.temperature_2m_max[0])}°C<br>☔ Chance de chuva: ${chuva}%`,
+        `Em ${g.city || g.locality || "sua região"} estão ${Math.round(c.temperature_2m)} graus, ${cond}. Chance de chuva de ${chuva} por cento.`);
+    } catch (e) { jadeDiz("Não consegui buscar o clima agora. Verifique a internet e tente de novo."); }
+  }, () => jadeDiz("Preciso da permissão de localização para dizer como está a sua região. Libere no navegador e diga <i>status</i> de novo."), { timeout: 10000, maximumAge: 300000 });
+}
+function gerarRelatorio() {
   jadeDiz(`<b>Status</b><br>${saudacao()}, ${chamar()}!<br>Tarefas: ${memoria.tarefas.length}<br>Coisas que aprendi: ${memoria.conhecimentos.length}<br>Projetos 3D: ${memoria.projetos3D.length}<br>Voz: ${vozLigada ? "ligada" : "desligada"}`, "Aqui está o seu status.");
 }
 
@@ -430,7 +450,7 @@ function processarModo3DTexto(txt) {
 
 /* ================= CÉREBRO DA JADE ================= */
 const PIADAS = ["Por que o robô foi ao médico? Estava com vírus!", "O que o JS disse pro CSS? Você me dá estilo!", "Por que o programador saiu pro café? Para dar um break.", "Existem 10 tipos de pessoas: as que entendem binário e as que não."];
-const AJUDA = `<b>O que sei fazer</b><br>• <i>nova tarefa: comprar pão</i> · <i>minhas tarefas</i> · <i>concluir tarefa 1</i><br>• <i>quanto é 12*7+3</i><br>• <i>meu nome é Ana</i><br>• <i>ensinar</i> (você me ensina perguntas e respostas)<br>• <i>modo 3D</i> · <i>crie um camaro amarelo de metal</i> · <i>meus projetos</i><br>• hora, data, piada`;
+const AJUDA = `<b>O que sei fazer</b><br>• <i>nova tarefa: comprar pão</i> · <i>minhas tarefas</i> · <i>concluir tarefa 1</i><br>• <i>quanto é 12*7+3</i><br>• <i>meu nome é Ana</i><br>• <i>ensinar</i> (você me ensina perguntas e respostas)<br>• <i>modo 3D</i> · <i>crie um camaro amarelo de metal</i> · <i>meus projetos</i><br>• <i>status</i> (clima da sua região) · <i>relatório</i> (minhas tarefas e memória)<br>• hora, data, piada`;
 
 function aprenderFluxo(txt) {
   if (aprendendo === 1) { perguntaTemp = txt; aprendendo = 2; return jadeDiz("Certo! E qual deve ser a minha resposta?"); }
@@ -467,6 +487,8 @@ function processarComando(txt) {
     memoria.tarefas = memoria.tarefas.map(t => typeof t === "string" ? { t, feita: false } : t);
     return jadeDiz(memoria.tarefas.length ? "Suas tarefas:<br>" + memoria.tarefas.map((t, i) => `${i + 1}. ${t.feita ? "✅ <s>" + esc(t.t) + "</s>" : esc(t.t)}`).join("<br>") : "Nenhuma tarefa. Diga <i>nova tarefa: ...</i>");
   }
+  if (/\bstatus\b/.test(n)) return statusRegiao();
+  if (/\brelatorio\b/.test(n)) return gerarRelatorio();
   const calc = calcular(txt);
   if (calc !== null) return jadeDiz(`Resultado: <b>${calc}</b>`, `O resultado é ${calc}`);
 
@@ -517,4 +539,5 @@ jadeDiz(`${saudacao()}, ${chamar()}! Diga <i>ajuda</i> para ver o que eu faço.`
 </script>
 </body>
 </html>
+
 
