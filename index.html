@@ -96,7 +96,7 @@ try { Object.assign(memoria, JSON.parse(localStorage.getItem("jade_memoria")) ||
 memoria.perfil = memoria.perfil || {};
 let aprendendo = 0, perguntaTemp = "", gravacaoAtiva = false, rec = null, vozLigada = true, vozEscolhida = null;
 let modo3DAtivo = false, scene3D, camera3D, renderer3D, grupoProjeto3D, controls3D, animId3D = null, ro3D = null;
-let ultimoToque3D = Date.now(), wire = false;
+let ultimoToque3D = Date.now(), wire = false, ultimaJade = null, ultimaIdx = -1, pendente = null;
 
 const $ = id => document.getElementById(id);
 const inputEl = $("mensagem"), chatEl = $("chat"), btnMic = $("btnOuvir");
@@ -160,10 +160,10 @@ function escrever(texto, remetente, cru, imgUrl) {
   chatEl.scrollTop = chatEl.scrollHeight;
   return div;
 }
-function jadeDiz(html, voz, imgUrl) { escrever(html, "jade", false, imgUrl); falar(voz || html); }
+function jadeDiz(html, voz, imgUrl) { ultimaJade = [html, voz]; escrever(html, "jade", false, imgUrl); falar(voz || html); }
 function renderChips() {
   const box = $("chips"); box.innerHTML = "";
-  ["Que horas são?", "Conte uma piada", "Nova tarefa: ", "Quanto é 12*7+3", "Status", "Modo 3D", "Ensinar", "Ajuda"].forEach(s => {
+  ["Que horas são?", "Conte uma piada", "Nova tarefa: ", "O que é um buraco negro", "Status", "Modo 3D", "Ensinar", "Ajuda"].forEach(s => {
     const c = document.createElement("button");
     c.type = "button"; c.className = "chip"; c.textContent = s;
     c.onclick = () => { inputEl.value = s; if (s.endsWith(": ")) inputEl.focus(); else enviar(); };
@@ -450,9 +450,66 @@ function processarModo3DTexto(txt) {
 
 /* ================= CÉREBRO DA JADE ================= */
 const PIADAS = ["Por que o robô foi ao médico? Estava com vírus!", "O que o JS disse pro CSS? Você me dá estilo!", "Por que o programador saiu pro café? Para dar um break.", "Existem 10 tipos de pessoas: as que entendem binário e as que não."];
-const AJUDA = `<b>O que sei fazer</b><br>• <i>nova tarefa: comprar pão</i> · <i>minhas tarefas</i> · <i>concluir tarefa 1</i><br>• <i>quanto é 12*7+3</i><br>• <i>meu nome é Ana</i><br>• <i>ensinar</i> (você me ensina perguntas e respostas)<br>• <i>modo 3D</i> · <i>crie um camaro amarelo de metal</i> · <i>meus projetos</i><br>• <i>status</i> (clima da sua região) · <i>relatório</i> (minhas tarefas e memória)<br>• hora, data, piada`;
+const AJUDA = `<b>O que sei fazer</b><br>• <i>nova tarefa: comprar pão</i> · <i>minhas tarefas</i> · <i>concluir tarefa 1</i><br>• <i>quanto é 12*7+3</i><br>• <i>meu nome é Ana</i><br>• <i>ensinar</i> (você me ensina perguntas e respostas)<br>• <i>modo 3D</i> · <i>crie um camaro amarelo de metal</i> · <i>meus projetos</i><br>• <i>status</i> (clima da sua região) · <i>relatório</i> (minhas tarefas e memória)<br>• <i>o que é fotossíntese</i> (pesquiso na Wikipédia) · <i>timer 5 minutos</i> · <i>20% de 150</i><br>• <i>minha cor favorita é azul</i> · <i>qual é minha cor favorita</i> · <i>eu gosto de futebol</i><br>• <i>errado, a resposta certa é ...</i> (eu corrijo) · <i>repete</i><br>• hora, data, piada`;
+
+
+/* ================= INTELIGÊNCIA ================= */
+const STOPW = new Set("a o as os um uma de do da dos das em no na nos nas por para pra com que e eh me te se ao aos jade voce vc eu meu minha qual quais como".split(" "));
+const toks = t => normalizar(t).split(" ").filter(w => w.length > 2 && !STOPW.has(w));
+function pontuar(a, b) {
+  const A = new Set(toks(a)), B = new Set(toks(b)); let jac = 0;
+  if (A.size && B.size) { let i = 0; A.forEach(w => { if (B.has(w) || [...B].some(x => x.length > 4 && w.length > 4 && lev(w, x) <= 1)) i++; }); jac = i / Math.max(A.size, B.size); }
+  return Math.max(similaridade(a, b), jac);
+}
+const VOCAB = new Set(("tarefa tarefas status relatorio projeto projetos ensinar aprender piada horas ajuda desfazer limpar cena abrir concluir remover adicionar nova anotar timer lembrar avise minutos segundos crie criar faca monte desenhe " + Object.values(R).map(o => o.re.replace(/\|/g, " ")).join(" ")).split(" ").filter(w => w.length > 3));
+function corrigir(n) {
+  return n.split(" ").map(w => {
+    if (w.length < 5 || VOCAB.has(w) || /\d/.test(w)) return w;
+    const lim = w.length > 7 ? 2 : 1; let best = w, bd = lim + 1;
+    VOCAB.forEach(v => { if (Math.abs(v.length - w.length) <= lim) { const d = lev(w, v); if (d < bd) { bd = d; best = v; } } });
+    return best;
+  }).join(" ");
+}
+const cacheWiki = {};
+async function wikiBuscar(q) {
+  const base = "https://pt.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=extracts|info&inprop=url&exintro=1&explaintext=1&exsentences=3&";
+  const pegar = async params => { const r = await fetch(base + params).then(x => x.json()); return r.query && r.query.pages ? Object.values(r.query.pages)[0] : null; };
+  const ruim = pg => !pg || pg.missing !== undefined || !pg.extract || /pode (se )?referir|pode significar|pode designar|refere-se a:/i.test(pg.extract.slice(0, 250));
+  let pg = await pegar("titles=" + encodeURIComponent(q.charAt(0).toUpperCase() + q.slice(1)));
+  if (ruim(pg)) pg = await pegar("generator=search&gsrlimit=1&gsrsearch=" + encodeURIComponent(q));
+  return ruim(pg) ? null : pg;
+}
+async function pesquisarWiki(q) {
+  q = q.replace(/\s+/g, " ").trim();
+  if (!q) return;
+  jadeDiz(`Pesquisando <b>${esc(q)}</b>...`, "Já te respondo");
+  try {
+    const pg = cacheWiki[q] || (cacheWiki[q] = await wikiBuscar(q));
+    if (!pg) { delete cacheWiki[q]; return jadeDiz(`Não achei nada sobre "<i>${esc(q)}</i>". Tente de outro jeito ou me ensine com <i>ensinar</i>.`); }
+    jadeDiz(`<b>${esc(pg.title)}</b><br>${esc(pg.extract)}<br><small><a href="${esc(pg.fullurl)}" target="_blank" rel="noopener" style="color:#b366ff">Fonte: Wikipédia</a></small>`, pg.extract);
+  } catch (e) { jadeDiz("Não consegui acessar a internet para pesquisar. Verifique a conexão e tente de novo."); }
+}
+function topicoPergunta(txt) {
+  const t = txt.toLowerCase().replace(/[?!.,;:]/g, " ").replace(/\s+/g, " ").trim().replace(/^(oque|oq|o q)\b/, "o que").replace(/^(q|que) (é|e)\b/, "o que é");
+  const art = "(?:um |uma |uns |umas |o |a |os |as )?";
+  const ps = [
+    new RegExp("^(?:o que|quem)\\s*(?:é|e|eh|são|sao|foi|era|eram|significa|quer dizer)?\\s+" + art + "(.{2,60})$"),
+    new RegExp("^(?:me )?(?:explica|explique|defina|define|descreva|conte sobre|fale sobre|me fale sobre|fala sobre|pesquis\\w+(?: sobre)?|busque|busca|procure)\\s+" + art + "(.{2,60})$"),
+    new RegExp("^(?:como funciona|para que serve|pra que serve|onde fica|onde fica|qual (?:é|e) (?:o )?significado de|o que significa)\\s+" + art + "(.{2,60})$")
+  ];
+  for (const r of ps) { const m = t.match(r); if (m) return m[1].trim(); }
+  return null;
+}
+function agendar(n) {
+  const m = n.match(/(\d+)\s*(segundos?|seg|minutos?|min|horas?|h)\b/); if (!m) return false;
+  const q = +m[1], u = m[2][0], ms = q * (u === "s" ? 1e3 : u === "h" ? 36e5 : 6e4);
+  const de = n.replace(/.*?\d+\s*\w+\s*(?:de|para|pra)?\s*/, "").trim();
+  setTimeout(() => jadeDiz(`⏰ ${chamar()}, passou o tempo!${de && !/^(timer|lembr\w+|avis\w+)/.test(de) ? " Lembrete: <b>" + esc(de) + "</b>" : ""}`, "Atenção! Passou o tempo!"), ms);
+  jadeDiz(`Combinado! Aviso em <b>${q} ${m[2]}</b>. Mantenha esta aba aberta.`); return true;
+}
 
 function aprenderFluxo(txt) {
+  if (aprendendo === 3) { if (memoria.conhecimentos[ultimaIdx]) memoria.conhecimentos[ultimaIdx].r = txt; aprendendo = 0; salvarMemoria(); return jadeDiz('Corrigido! Obrigada por me ensinar.'); }
   if (aprendendo === 1) { perguntaTemp = txt; aprendendo = 2; return jadeDiz("Certo! E qual deve ser a minha resposta?"); }
   memoria.conhecimentos.push({ p: perguntaTemp, r: txt }); aprendendo = 0; salvarMemoria();
   jadeDiz(`Aprendi! Se você perguntar algo parecido com "<i>${esc(perguntaTemp)}</i>", eu respondo.`, "Aprendi!");
@@ -466,10 +523,11 @@ function calcular(txt) {
 function processarComando(txt) {
   txt = txt.trim(); if (!txt) return;
   escrever(txt, "user"); inputEl.value = "";
-  const n = normalizar(txt);
+  const nRaw = normalizar(txt), n = corrigir(nRaw);
   let m;
 
   if (aprendendo) return aprenderFluxo(txt);
+  if (pendente) { const c = pendente; pendente = null; if (/^(sim|isso|s|exato|pode ser|quis)/.test(nRaw)) { ultimaIdx = memoria.conhecimentos.indexOf(c); return jadeDiz(esc(c.r)); } }
   if (/^(cancelar|esquece)$/.test(n)) return jadeDiz("Ok, cancelado.");
 
   if ((m = txt.match(/(?:meu nome (?:é|e)|me chame de|pode me chamar de)\s+([^\s,.!?]+)/i))) {
@@ -492,6 +550,32 @@ function processarComando(txt) {
   const calc = calcular(txt);
   if (calc !== null) return jadeDiz(`Resultado: <b>${calc}</b>`, `O resultado é ${calc}`);
 
+  if (/\b(timer|me avis\w+|me lembr\w+|lembrete)\b/.test(n) && agendar(n)) return;
+  if ((m = txt.match(/(\d+[.,]?\d*)\s*(?:%|por ?cento)\s*de\s*(\d+[.,]?\d*)/i))) { const a = parseFloat(m[1].replace(",", ".")), b = parseFloat(m[2].replace(",", ".")), v = Math.round(a * b) / 100; return jadeDiz(`${a}% de ${b} é <b>${v}</b>`, `${v}`); }
+  if (/^(repete|de novo|fala de novo|repita)/.test(n) && ultimaJade) return jadeDiz(ultimaJade[0], ultimaJade[1]);
+  if (/^(errado|errou|nao era isso|resposta errada)/.test(n) && ultimaIdx >= 0 && memoria.conhecimentos[ultimaIdx]) {
+    const r = txt.match(/(?:certa|correta)\s+(?:é|e)\s+(.+)/i);
+    if (r) { memoria.conhecimentos[ultimaIdx].r = r[1]; salvarMemoria(); return jadeDiz("Corrigido! Obrigada."); }
+    aprendendo = 3; return jadeDiz("Desculpe! Qual seria a resposta certa?");
+  }
+  if ((m = n.match(/^qual (?:e )?(?:o |a )?(?:meu|minha) (.+)$/))) {
+    const f = memoria.perfil.fatos || {}; let k = null, sc = 0;
+    Object.keys(f).forEach(x => { const s2 = pontuar(x, m[1]); if (s2 > sc) { sc = s2; k = x; } });
+    return jadeDiz(k && sc > .6 ? `Seu(sua) ${esc(k)} é <b>${esc(f[k])}</b>.` : "Ainda não sei isso sobre você. Me conte: <i>meu(minha) ... é ...</i>");
+  }
+  if (/do que eu gosto|o que eu gosto/.test(n)) { const g = memoria.perfil.gostos || []; return jadeDiz(g.length ? "Você gosta de: " + g.map(esc).join(", ") + "." : "Ainda não sei. Diga <i>eu gosto de ...</i>"); }
+  if ((m = txt.match(/^eu (?:gosto|adoro|amo) (?:de |do |da )?(.{2,40})$/i))) { (memoria.perfil.gostos = memoria.perfil.gostos || []).push(m[1].trim()); salvarMemoria(); return jadeDiz(`Anotado! Você gosta de <b>${esc(m[1].trim())}</b>.`); }
+  if ((m = txt.match(/^(?:meu|minha)\s+(.{2,30}?)\s+(?:é|e|eh)\s+(.{1,60})$/i)) && !/\?/.test(txt)) { (memoria.perfil.fatos = memoria.perfil.fatos || {})[normalizar(m[1])] = m[2].trim(); salvarMemoria(); return jadeDiz(`Guardei: seu(sua) <b>${esc(m[1])}</b> é <b>${esc(m[2].trim())}</b>.`); }
+  if (/\b(como (voce )?(esta|vai)|tudo bem)\b/.test(n)) return jadeDiz(rnd([`Estou ótima, ${chamar()}! E você?`, "Tudo certo por aqui, pronta para ajudar!", "Funcionando a 100%! E você, como está?"]));
+  if (/\b(quem (e |eh )?voce|qual (e )?seu nome|quem te (criou|fez))\b/.test(n)) return jadeDiz("Sou a Jade, uma assistente criada por Luiz Benicio. Aprendo com você, guardo tarefas, crio modelos 3D e pesquiso na Wikipédia.");
+  if (/\b(estou|to|me sinto)\b.*\b(triste|cansad\w+|estressad\w+|ansios\w+|desanimad\w+)\b/.test(n)) return jadeDiz(`Sinto muito que esteja assim, ${chamar()}. Quer conversar, ouvir uma piada ou fazer uma pausa? Se estiver pesado demais, falar com alguém de confiança ajuda.`);
+  const topico = topicoPergunta(txt);
+  if (topico && !/\b(voce|vc|jade|horas|hoje|minhas?|meus?)\b/.test(normalizar(topico))) {
+    let mc = null, ms = 0;
+    memoria.conhecimentos.forEach(c => { const v = pontuar(c.p, txt); if (v > ms) { ms = v; mc = c; } });
+    if (mc && ms >= .75) { ultimaIdx = memoria.conhecimentos.indexOf(mc); return jadeDiz(esc(mc.r)); }
+    return pesquisarWiki(topico);
+  }
   if (/^(ensinar|aprender|aprenda|quero te ensinar)/.test(n)) { aprendendo = 1; return jadeDiz("Vamos lá! Qual pergunta você quer me ensinar?"); }
   if (/\b(meus )?projetos?\b/.test(n) && /\b(meus|listar|lista|ver)\b/.test(n)) return listarProjetos();
   if ((m = n.match(/abrir projeto (\d+)/))) return abrirProjeto(+m[1] - 1);
@@ -511,9 +595,11 @@ function processarComando(txt) {
   if (/\b(obrigad\w+|valeu)\b/.test(n)) return jadeDiz("Por nada!");
 
   let melhor = null, sc = 0;
-  memoria.conhecimentos.forEach(c => { const s = similaridade(c.p, txt); if (s > sc) { sc = s; melhor = c; } });
-  if (melhor && sc >= .7) return jadeDiz(esc(melhor.r));
-  jadeDiz(`Ainda não sei responder isso, ${chamar()}. Diga <i>ensinar</i> para me ensinar, ou <i>ajuda</i> para ver meus comandos.`);
+  memoria.conhecimentos.forEach(c => { const s2 = pontuar(c.p, txt); if (s2 > sc) { sc = s2; melhor = c; } });
+  if (melhor && sc >= .7) { ultimaIdx = memoria.conhecimentos.indexOf(melhor); return jadeDiz(esc(melhor.r)); }
+  if (melhor && sc >= .5) { pendente = melhor; return jadeDiz(`Você quis dizer "<i>${esc(melhor.p)}</i>"? Responda <b>sim</b> e eu respondo.`); }
+  if (nRaw.split(" ").length <= 6 && !/^(sim|nao|ok|talvez|tchau|blz)$/.test(nRaw)) return pesquisarWiki(txt.replace(/[?!.,;:]/g, ""));
+  jadeDiz(`Ainda não sei responder isso, ${chamar()}. Posso pesquisar (<i>o que é ...</i>), você pode me ensinar (<i>ensinar</i>) ou ver <i>ajuda</i>.`);
 }
 const enviar = () => processarComando(inputEl.value);
 
@@ -539,5 +625,6 @@ jadeDiz(`${saudacao()}, ${chamar()}! Diga <i>ajuda</i> para ver o que eu faço.`
 </script>
 </body>
 </html>
+
 
 
