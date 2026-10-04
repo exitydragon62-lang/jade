@@ -3,101 +3,88 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jade IA 2.0</title>
+<title>Jade IA 3.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
 *{box-sizing:border-box}
-body{background:#0d0814;font-family:'Segoe UI',Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;padding:15px;color:#fff}
+body{background:#0d0814;font-family:'Segoe UI',Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;min-height:100dvh;margin:0;padding:15px;color:#fff}
 .app{width:100%;max-width:550px;background:#181124;padding:20px;border-radius:20px;border:1px solid #3b235d;box-shadow:0 10px 30px rgba(0,0,0,.8),0 0 15px rgba(138,43,226,.2);display:flex;flex-direction:column;gap:15px}
 .header{text-align:center}
 h1{color:#b366ff;margin:0;font-size:26px;text-shadow:0 0 8px rgba(179,102,255,.4)}
-.subtitle{color:#a0a0b0;font-size:13px;margin-top:4px;font-weight:500}
+.subtitle{color:#a0a0b0;font-size:13px;margin-top:4px}
 #chat{background:#09050e;height:380px;overflow-y:auto;padding:15px;border-radius:14px;border:1px solid #2a1942;display:flex;flex-direction:column;gap:12px;box-shadow:inset 0 2px 6px rgba(0,0,0,.6)}
 .msg{max-width:90%;padding:10px 14px;border-radius:15px;font-size:14px;line-height:1.45;word-wrap:break-word}
 .msg-jade{align-self:flex-start;background:#251638;color:#f0e6ff;border-bottom-left-radius:2px;border:1px solid #4c287a}
-.msg-user{align-self:flex-end;background:#7928ca;color:#fff;border-bottom-right-radius:2px}
-.digitando{opacity:.7;font-style:italic}
+.msg-user{align-self:flex-end;background:#7928ca;border-bottom-right-radius:2px}
+.msg-img-base{width:100%;max-width:260px;border-radius:10px;margin-top:8px;border:1px solid #7928ca;display:block}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{background:#181124;border:1px solid #3b235d;color:#c9a8ff;padding:5px 10px;border-radius:14px;font-size:11px;cursor:pointer}
+.chip{background:#181124;border:1px solid #3b235d;color:#c9a8ff;padding:6px 11px;border-radius:14px;font-size:12px;cursor:pointer}
 .chip:hover{background:#251638}
 #container-3d{display:none;background:#05020a;border:1px solid #7928ca;border-radius:14px;padding:10px;flex-direction:column;gap:10px}
 #canvas-3d{width:100%;height:250px;border-radius:10px;background:#000;touch-action:none}
 .controles-3d{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.controles-3d select,.controles-3d input,.controles-3d button{background:#181124;border:1px solid #3b235d;color:#fff;padding:6px;border-radius:8px;font-size:12px}
+.controles-3d select,.controles-3d input,.controles-3d button{background:#181124;border:1px solid #3b235d;color:#fff;padding:7px;border-radius:8px;font-size:12px}
 .checkbox-container{grid-column:span 2;display:flex;align-items:center;gap:8px;font-size:12px;color:#0fc}
 .input-box{display:flex;gap:8px}
 input[type="text"]{flex:1;min-width:0;padding:12px 15px;background:#09050e;border:1px solid #3b235d;border-radius:12px;outline:none;font-size:14px;color:#fff}
-input[type="text"]:focus{border-color:#9d4edf;box-shadow:0 0 8px rgba(157,78,223,.4)}
+input[type="text"]:focus,button:focus-visible,.chip:focus-visible{border-color:#9d4edf;box-shadow:0 0 8px rgba(157,78,223,.6);outline:none}
 button{padding:12px 15px;border:0;border-radius:12px;background:#7928ca;color:#fff;font-weight:bold;cursor:pointer;transition:background .2s,transform .1s}
 button:hover{background:#9d4edf}
 button:active{transform:scale(.95)}
-.btn-mic{background:#4c287a;user-select:none}
+.btn-mic{background:#4c287a;user-select:none;touch-action:none}
 .btn-mic.recording{background:#ff2a6d;animation:pulse 1s infinite}
 .footer-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .shortcut-hint{font-size:11px;color:#6e6e8d}
 .btn-clear{background:transparent;color:#a0a0b0;font-size:11px;padding:0;text-decoration:underline}
 .btn-clear:hover{color:#ff4d4d;background:transparent}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@media (prefers-reduced-motion:reduce){.btn-mic.recording{animation:none}}
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="header">
-    <h1>Jade IA</h1>
-    <div class="subtitle">Criada por Luiz Benicio</div>
-  </div>
+  <div class="header"><h1>Jade IA</h1><div class="subtitle">Criada por Luiz Benicio</div></div>
 
   <div id="container-3d">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:13px;font-weight:bold;color:#b366ff;">Modo 01110100 - Visualizador 3D</span>
-      <button style="padding:2px 8px;font-size:10px;" onclick="fecharModo3D()">Fechar 3D</button>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;font-weight:bold;color:#b366ff">Modo 01110100 - Visualizador 3D</span>
+      <button type="button" style="padding:3px 9px;font-size:11px" onclick="fecharModo3D()">Fechar 3D</button>
     </div>
     <div id="canvas-3d"></div>
     <div class="controles-3d">
-      <select id="selectForma">
-        <option value="torus">Pulseira / Torus (Anel)</option>
-        <option value="cube">Cubo / Bloco</option>
-        <option value="sphere">Esfera / Bola</option>
-        <option value="cylinder">Cilindro / Tubo</option>
-        <option value="cone">Cone / Pirâmide</option>
-        <option value="tetrahedron">Tetraedro (4 Faces)</option>
-        <option value="octahedron">Octaedro (8 Faces)</option>
-        <option value="dodecahedron">Dodecaedro (12 Faces)</option>
-        <option value="icosahedron">Icosaedro (20 Faces)</option>
-        <option value="plane">Plano / Superfície</option>
-        <option value="ring">Anel / Disco Vazado</option>
-      </select>
-      <select id="selectMaterial">
+      <select id="selectForma" aria-label="Forma"></select>
+      <select id="selectMaterial" aria-label="Material">
         <option value="phong">Brilhante (Padrão)</option>
         <option value="standard">Metálico</option>
         <option value="glass">Vidro / Reflexivo</option>
       </select>
-      <input type="color" id="corObjeto" value="#b366ff">
-      <button onclick="adicionarForma3DManual()">Adicionar Forma</button>
-      <div class="checkbox-container">
-        <input type="checkbox" id="chkMesclar">
-        <label for="chkMesclar">Mesclar com o projeto atual</label>
-      </div>
-      <button onclick="limparCena3D()" style="background:#4c287a;">Limpar Cenas</button>
-      <button onclick="salvarProjeto3D()" style="background:#00b386;">Salvar Projeto</button>
+      <input type="color" id="corObjeto" value="#b366ff" aria-label="Cor">
+      <button type="button" onclick="adicionarForma3DManual()">Adicionar Forma</button>
+      <div class="checkbox-container"><input type="checkbox" id="chkMesclar"><label for="chkMesclar">Mesclar com o projeto atual</label></div>
+      <button type="button" onclick="desfazer3D()" style="background:#4c287a">Desfazer</button>
+      <button type="button" onclick="limparCena3D()" style="background:#4c287a">Limpar Cena</button>
+      <button type="button" onclick="alternarWire()" style="background:#4c287a">Wireframe</button>
+      <button type="button" onclick="baixarPNG()" style="background:#0a7ea4">Baixar PNG</button>
+      <button type="button" onclick="salvarProjeto3D()" style="background:#00b386">Salvar Projeto</button>
+      <button type="button" onclick="listarProjetos()" style="background:#00b386">Meus Projetos</button>
     </div>
   </div>
 
-  <div id="chat"></div>
+  <div id="chat" aria-live="polite"></div>
   <div class="chips" id="chips"></div>
 
   <div class="input-box">
     <input id="mensagem" type="text" placeholder="Converse, peça um comando ou use atalhos..." autocomplete="off">
-    <button onclick="enviar()">Enviar</button>
-    <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">Falar</button>
+    <button type="button" onclick="enviar()">Enviar</button>
+    <button type="button" id="btnOuvir" class="btn-mic" aria-label="Segure para falar">Falar</button>
   </div>
 
   <div class="footer-actions">
     <span class="shortcut-hint"><b>C</b> falar | <b>V</b> status | <b>M</b> site | <b>T</b> 3D | <b>N</b> voltar</span>
     <span>
-      <button class="btn-clear" id="btnVoz" onclick="alternarVoz()">Voz: ligada</button> &nbsp;
-      <button class="btn-clear" onclick="limparMemoria()">Resetar aprendizado</button>
+      <button type="button" class="btn-clear" id="btnVoz" onclick="alternarVoz()">Voz: ligada</button> &nbsp;
+      <button type="button" class="btn-clear" onclick="limparMemoria()">Resetar aprendizado</button>
     </span>
   </div>
 </div>
@@ -107,164 +94,164 @@ button:active{transform:scale(.95)}
 let memoria = { conhecimentos: [], tarefas: [], projetos3D: [], perfil: {} };
 try { Object.assign(memoria, JSON.parse(localStorage.getItem("jade_memoria")) || {}); } catch (e) {}
 memoria.perfil = memoria.perfil || {};
-let modoAprendizado = false, etapaAprendizado = 0, perguntaTemp = "";
-let gravacaoAtiva = false, rec = null, vozLigada = true;
-let modo3DAtivo = false, scene3D, camera3D, renderer3D, grupoProjeto3D, controls3D, animId3D = null;
-let timerInatividade3D = null; // Controla os 10s de inatividade no 3D
-const ctx = { ultimoTema: null, historico: [], msgs: 0 };
+let aprendendo = 0, perguntaTemp = "", gravacaoAtiva = false, rec = null, vozLigada = true, vozEscolhida = null;
+let modo3DAtivo = false, scene3D, camera3D, renderer3D, grupoProjeto3D, controls3D, animId3D = null, ro3D = null;
+let ultimoToque3D = Date.now(), wire = false;
 
-const inputEl = document.getElementById("mensagem");
-const chatEl = document.getElementById("chat");
-const btnMic = document.getElementById("btnOuvir");
+const $ = id => document.getElementById(id);
+const inputEl = $("mensagem"), chatEl = $("chat"), btnMic = $("btnOuvir");
 
 /* ================= UTILIDADES ================= */
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const rnd = arr => arr[Math.floor(Math.random() * arr.length)];
+const rnd = a => a[Math.floor(Math.random() * a.length)];
 const salvarMemoria = () => { try { localStorage.setItem("jade_memoria", JSON.stringify(memoria)); } catch (e) {} };
-
-function normalizar(txt) {
-  return String(txt).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/(.)\1{2,}/g, "$1").replace(/[?!=.,;:]/g, " ").replace(/\s+/g, " ").trim();
-}
-const STOP = new Set("a o as os um uma de do da dos das em no na nos nas por para pra com que e eh me te se ao aos jade voce vc mestre porque pq favor pode poderia queria quero gostaria".split(" "));
-
+const normalizar = t => String(t).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/(.)\1{2,}/g, "$1").replace(/[?!=.,;:]/g, " ").replace(/\s+/g, " ").trim();
 function lev(a, b) {
   if (a === b) return 0;
-  const m = a.length, n = b.length;
-  if (!m || !n) return Math.max(m, n);
-  let prev = Array.from({ length: n + 1 }, (_, i) => i);
-  for (let i = 1; i <= m; i++) {
+  if (!a.length || !b.length) return Math.max(a.length, b.length);
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
     const cur = [i];
-    for (let j = 1; j <= n; j++)
-      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
     prev = cur;
   }
-  return prev[n];
+  return prev[b.length];
 }
+const similaridade = (a, b) => { a = normalizar(a); b = normalizar(b); const m = Math.max(a.length, b.length); return m ? 1 - lev(a, b) / m : 1; };
+const chamar = () => memoria.perfil.nome ? esc(memoria.perfil.nome) : "Mestre";
+const saudacao = () => { const h = new Date().getHours(); return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite"; };
 
 /* ================= VOZ / CHAT ================= */
+function escolherVoz() {
+  if (!('speechSynthesis' in window)) return;
+  vozEscolhida = speechSynthesis.getVoices().find(x => x.lang.includes("pt") && /Luciana|Yelda|Google português|Maria|Helena|Francisca/.test(x.name)) || null;
+}
+if ('speechSynthesis' in window) { escolherVoz(); speechSynthesis.onvoiceschanged = escolherVoz; }
+
 function alternarVoz() {
   vozLigada = !vozLigada;
   if (!vozLigada && 'speechSynthesis' in window) speechSynthesis.cancel();
-  document.getElementById("btnVoz").textContent = "Voz: " + (vozLigada ? "ligada" : "desligada");
+  $("btnVoz").textContent = "Voz: " + (vozLigada ? "ligada" : "desligada");
 }
-
 function falar(texto) {
   if (!vozLigada || !('speechSynthesis' in window)) return;
   let t = texto.replace(/<small>.*?<\/small>/g, ' ').replace(/<[^>]*>?/gm, ' ').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim();
   if (t.length > 220) t = t.substring(0, 220).replace(/\s\S*$/, "") + "... o restante está no chat!";
   speechSynthesis.cancel();
   const v = new SpeechSynthesisUtterance(t);
-  v.lang = "pt-BR"; v.pitch = 1.2; v.rate = 1.0;
-  const fem = speechSynthesis.getVoices().find(x => x.lang.includes("pt") && /Luciana|Yelda|Google português|Maria|Helena|Francisca/.test(x.name));
-  if (fem) v.voice = fem;
+  v.lang = "pt-BR"; v.pitch = 1.2;
+  if (vozEscolhida) v.voice = vozEscolhida;
   speechSynthesis.speak(v);
 }
-
-function escrever(texto, remetente, cru) {
+function escrever(texto, remetente, cru, imgUrl) {
   const div = document.createElement("div");
-  div.classList.add("msg");
-  if (remetente === "user") {
-    div.classList.add("msg-user");
-    div.innerHTML = `<b>Mestre:</b> ${cru ? texto : esc(texto)}`;
-  } else {
-    div.classList.add("msg-jade");
+  div.className = "msg " + (remetente === "user" ? "msg-user" : "msg-jade");
+  if (remetente === "user") div.innerHTML = `<b>${chamar()}:</b> ${cru ? texto : esc(texto)}`;
+  else {
     div.innerHTML = `<b>Jade:</b> ${texto}`;
+    if (imgUrl) {
+      const img = new Image();
+      img.className = "msg-img-base"; img.alt = "Imagem base"; img.loading = "lazy"; img.src = imgUrl;
+      img.onerror = () => img.remove();
+      div.appendChild(img);
+    }
   }
   chatEl.appendChild(div);
   chatEl.scrollTop = chatEl.scrollHeight;
   return div;
 }
-
-function jadeDiz(html, voz) { escrever(html, "jade"); falar(voz || html); }
-
+function jadeDiz(html, voz, imgUrl) { escrever(html, "jade", false, imgUrl); falar(voz || html); }
 function renderChips() {
-  const sugestoes = ["Que horas são?", "Conte uma piada", "Minhas tarefas", "Modo 3D", "Ajuda"];
-  const box = document.getElementById("chips");
-  box.innerHTML = "";
-  sugestoes.forEach(s => {
-    const c = document.createElement("span");
-    c.className = "chip"; c.textContent = s;
-    c.onclick = () => { inputEl.value = s; enviar(); };
+  const box = $("chips"); box.innerHTML = "";
+  ["Que horas são?", "Conte uma piada", "Nova tarefa: ", "Quanto é 12*7+3", "Modo 3D", "Ensinar", "Ajuda"].forEach(s => {
+    const c = document.createElement("button");
+    c.type = "button"; c.className = "chip"; c.textContent = s;
+    c.onclick = () => { inputEl.value = s; if (s.endsWith(": ")) inputEl.focus(); else enviar(); };
     box.appendChild(c);
   });
 }
 
-renderChips();
+/* ================= ATALHOS ================= */
+inputEl.addEventListener("keydown", e => { if (e.key === "Enter") enviar(); });
+window.addEventListener("keydown", e => {
+  if (document.activeElement === inputEl || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  const k = e.key.toLowerCase();
+  if (k === "c" && !gravacaoAtiva) iniciarGravacao();
+  else if (k === "v") gerarRelatorioMestre();
+  else if (k === "m") { e.preventDefault(); prepararAberturaSite(); }
+  else if (k === "t") { e.preventDefault(); ativarModo3D(); }
+  else if (k === "n") { e.preventDefault(); voltarParaJade(); }
+});
+window.addEventListener("keyup", e => { if (e.key.toLowerCase() === "c" && gravacaoAtiva) pararGravacao(); });
 
-/* ================= MÓDULO 3D COM INATIVIDADE (10 SEGUNDOS) ================= */
-function resetarTimerInatividade3D() {
-  if (controls3D) {
-    controls3D.autoRotate = false; // Parar rotação ao interagir
+function limparMemoria() {
+  if (confirm("Deseja apagar todo o aprendizado, tarefas, perfil e projetos 3D salvos?")) {
+    memoria = { conhecimentos: [], tarefas: [], projetos3D: [], perfil: {} };
+    salvarMemoria(); jadeDiz("Memória limpa! Recomeçando do zero.");
   }
-  clearTimeout(timerInatividade3D);
-  
-  // 10.000 ms = 10 segundos
-  timerInatividade3D = setTimeout(() => {
-    if (modo3DAtivo && controls3D) {
-      controls3D.autoRotate = true;
-      controls3D.autoRotateSpeed = 2.0; // Velocidade do giro suave
-    }
-  }, 10000);
+}
+function voltarParaJade() { fecharModo3D(); inputEl.focus(); jadeDiz(`De volta ao chat, ${chamar()}.`); }
+function prepararAberturaSite() {
+  let u = prompt("Qual site devo abrir?", "exemplo.com"); if (!u) return;
+  if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+  window.open(u, "_blank", "noopener"); jadeDiz("Abrindo o site em outra aba.");
+}
+function gerarRelatorioMestre() {
+  jadeDiz(`<b>Status</b><br>${saudacao()}, ${chamar()}!<br>Tarefas: ${memoria.tarefas.length}<br>Coisas que aprendi: ${memoria.conhecimentos.length}<br>Projetos 3D: ${memoria.projetos3D.length}<br>Voz: ${vozLigada ? "ligada" : "desligada"}`, "Aqui está o seu status.");
 }
 
+/* ================= MÓDULO 3D ================= */
+const toque3D = () => { ultimoToque3D = Date.now(); if (controls3D) controls3D.autoRotate = false; };
+
 function inicializarCena3D() {
-  const c = document.getElementById("canvas-3d");
-  c.innerHTML = "";
+  const c = $("canvas-3d");
   if (animId3D) cancelAnimationFrame(animId3D);
-  if (typeof THREE === "undefined") { c.innerHTML = "<p style='padding:10px;font-size:12px'>Three.js não carregou. Verifique a internet.</p>"; return; }
-  
+  if (ro3D) ro3D.disconnect();
+  if (controls3D) controls3D.dispose();
+  if (renderer3D) { renderer3D.dispose(); renderer3D.forceContextLoss(); }
+  c.innerHTML = "";
+  if (typeof THREE === "undefined" || !THREE.OrbitControls) { c.innerHTML = "<p style='padding:10px;font-size:12px'>Three.js não carregou. Verifique a internet.</p>"; return; }
   scene3D = new THREE.Scene();
   camera3D = new THREE.PerspectiveCamera(60, c.clientWidth / c.clientHeight, 0.1, 1000);
   camera3D.position.set(0, 0, 5);
-  
-  renderer3D = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer3D = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer3D.setSize(c.clientWidth, c.clientHeight);
-  renderer3D.setPixelRatio(window.devicePixelRatio);
+  renderer3D.setPixelRatio(Math.min(devicePixelRatio, 2));
   c.appendChild(renderer3D.domElement);
-  
   controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
-  controls3D.enableDamping = true; 
-  controls3D.dampingFactor = 0.05;
+  controls3D.enableDamping = true; controls3D.dampingFactor = 0.05; controls3D.autoRotateSpeed = 2.5;
   controls3D.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
-  
-  // Configuração da rotação suave após inatividade
-  controls3D.autoRotate = false;
-  controls3D.autoRotateSpeed = 2.0;
-  
-  // Detectar interação no canvas 3D para zerar o timer de 10s
-  controls3D.addEventListener('start', resetarTimerInatividade3D);
-  const eventos = ['mousemove', 'mousedown', 'touchstart', 'touchmove', 'wheel'];
-  eventos.forEach(evt => renderer3D.domElement.addEventListener(evt, resetarTimerInatividade3D));
-
-  const luz = new THREE.DirectionalLight(0xffffff, 1); luz.position.set(5, 5, 5).normalize(); scene3D.add(luz);
+  controls3D.addEventListener('start', toque3D);
+  renderer3D.domElement.addEventListener('wheel', toque3D, { passive: true });
+  const luz = new THREE.DirectionalLight(0xffffff, 1); luz.position.set(5, 5, 5); scene3D.add(luz);
   scene3D.add(new THREE.AmbientLight(0x404040, 1.5));
   grupoProjeto3D = new THREE.Group(); scene3D.add(grupoProjeto3D);
-  
-  (function loop() { 
-    animId3D = requestAnimationFrame(loop); 
-    controls3D.update(); 
-    renderer3D.render(scene3D, camera3D); 
+  ro3D = new ResizeObserver(() => {
+    if (!c.clientWidth || !renderer3D) return;
+    camera3D.aspect = c.clientWidth / c.clientHeight; camera3D.updateProjectionMatrix();
+    renderer3D.setSize(c.clientWidth, c.clientHeight);
+  });
+  ro3D.observe(c);
+  (function loop() {
+    animId3D = requestAnimationFrame(loop);
+    if (Date.now() - ultimoToque3D > 10000) controls3D.autoRotate = true;
+    controls3D.update(); renderer3D.render(scene3D, camera3D);
   })();
-
-  // Inicia a contagem de 10 segundos assim que o 3D abre
-  resetarTimerInatividade3D();
 }
-
 function ativarModo3D() {
-  modo3DAtivo = true;
-  document.getElementById("container-3d").style.display = "flex";
+  if (modo3DAtivo) return;
+  modo3DAtivo = true; ultimoToque3D = Date.now();
+  $("container-3d").style.display = "flex";
   inicializarCena3D();
-  jadeDiz("[Modo Visualizador 3D] Estúdio 3D ativado, Mestre! Se passar 10 segundos sem interagir, a imagem começará a girar suavemente.", "Modo 3D de projetos ativado, Mestre!");
+  jadeDiz(`[Modo 01110100] Estúdio 3D ativado, ${chamar()}! Peça por texto ou voz: <i>"crie um camaro amarelo de metal"</i>, <i>"faça uma casa grande"</i>. Parado por 10s, o modelo gira sozinho.`, "Modo 3D ativado!");
 }
-
 function fecharModo3D() {
-  modo3DAtivo = false;
-  clearTimeout(timerInatividade3D);
-  document.getElementById("container-3d").style.display = "none";
+  modo3DAtivo = false; $("container-3d").style.display = "none";
   if (animId3D) cancelAnimationFrame(animId3D);
+  animId3D = null;
 }
 
+const P4 = (x, z, f) => [[x, z], [-x, z], [x, -z], [-x, -z]].map(f);
 function criarGeometria(t) {
   switch (t) {
     case 'torus': return new THREE.TorusGeometry(1.2, 0.4, 16, 100);
@@ -272,103 +259,262 @@ function criarGeometria(t) {
     case 'sphere': return new THREE.SphereGeometry(1.2, 32, 32);
     case 'cylinder': return new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
     case 'cone': return new THREE.ConeGeometry(1, 2, 32);
+    case 'pyramid': { const g = new THREE.ConeGeometry(1.4, 2, 4); g.rotateY(Math.PI / 4); return g; }
     case 'tetrahedron': return new THREE.TetrahedronGeometry(1.5);
     case 'octahedron': return new THREE.OctahedronGeometry(1.5);
     case 'dodecahedron': return new THREE.DodecahedronGeometry(1.3);
     case 'icosahedron': return new THREE.IcosahedronGeometry(1.3);
     case 'plane': return new THREE.PlaneGeometry(2, 2);
     case 'ring': return new THREE.RingGeometry(0.5, 1.5, 32);
+    case 'knot': return new THREE.TorusKnotGeometry(.9, .3, 100, 16);
+    case 'star': {
+      const sh = new THREE.Shape();
+      for (let i = 0; i < 10; i++) { const r = i % 2 ? .55 : 1.3, a = Math.PI / 5 * i + Math.PI / 2, x = Math.cos(a) * r, y = Math.sin(a) * r; i ? sh.lineTo(x, y) : sh.moveTo(x, y); }
+      const g = new THREE.ExtrudeGeometry(sh, { depth: .4, bevelEnabled: false }); g.center(); return g;
+    }
+    case 'heart': {
+      const sh = new THREE.Shape();
+      sh.moveTo(0, -1); sh.bezierCurveTo(-.2, -.7, -1.2, -.2, -1.2, .4); sh.bezierCurveTo(-1.2, 1.1, -.3, 1.3, 0, .7);
+      sh.bezierCurveTo(.3, 1.3, 1.2, 1.1, 1.2, .4); sh.bezierCurveTo(1.2, -.2, .2, -.7, 0, -1);
+      const g = new THREE.ExtrudeGeometry(sh, { depth: .5, bevelEnabled: false }); g.center(); return g;
+    }
     default: return new THREE.BoxGeometry(1, 1, 1);
   }
 }
-
 function criarMaterial3D(tipo, hex) {
   const color = new THREE.Color(hex), side = THREE.DoubleSide;
   if (tipo === 'standard') return new THREE.MeshStandardMaterial({ color, roughness: .2, metalness: .8, side });
-  if (tipo === 'glass') return new THREE.MeshPhysicalMaterial({ color, roughness: .1, transmission: .9, opacity: 1, transparent: true, side });
+  if (tipo === 'glass') return new THREE.MeshPhysicalMaterial({ color, roughness: .1, transmission: .9, transparent: true, side });
   return new THREE.MeshPhongMaterial({ color, shininess: 100, side });
 }
+const mk = (geo, cor, mat) => { const m = new THREE.Mesh(geo, criarMaterial3D(mat, cor)); m.material.wireframe = wire; return m; };
 
-function adicionarForma3DManual() {
+/* Receita: [tipo, dimensões, posição, cor (omitir = principal), rotação, escala]. b=caixa s=esfera y=cilindro c=cone t=torus */
+const R = {
+  camaro: { n: 'Camaro', re: 'camaro|esportivo', def: '#facc15', p: [['b', [2.6, .55, 1.3], [0, .25, 0]], ['b', [1.2, .45, 1.1], [-.15, .72, 0], '#111'], ['b', [.9, .12, 1.25], [.85, .5, 0], , [0, 0, -.1]], ['b', [2.5, .03, .22], [0, .54, 0], '#f5f5f5'], ...P4(.8, .68, ([x, z]) => ['y', [.3, .3, .2], [x, -.05, z], '#222', [1.571, 0, 0]])] },
+  carro: { n: 'carro', re: 'carro|automovel|veiculo|fusca|taxi', def: '#d62828', p: [['b', [2.4, .6, 1.1], [0, 0, 0]], ['b', [1.2, .5, 1], [-.1, .55, 0], '#bfe6ff'], ...P4(.8, .55, ([x, z]) => ['y', [.32, .32, .25], [x, -.3, z], '#111', [1.571, 0, 0]])] },
+  robo: { n: 'robô', re: 'robo|androide', def: '#5b8def', p: [['b', [1, 1.2, .7], [0, 0, 0]], ['b', [.7, .55, .6], [0, 1.05, 0], '#cfcfcf'], ['s', [.09], [-.18, 1.1, .31], '#00e5ff'], ['s', [.09], [.18, 1.1, .31], '#00e5ff'], ['y', [.03, .03, .4], [0, 1.5, 0], '#888'], ['s', [.08], [0, 1.75, 0], '#ff3b3b'], ['b', [.2, 1, .2], [-.65, 0, 0], '#cfcfcf'], ['b', [.2, 1, .2], [.65, 0, 0], '#cfcfcf']] },
+  casa: { n: 'casa', re: 'casa|chale|moradia', def: '#e8d5b0', p: [['b', [2, 1.4, 2], [0, 0, 0]], ['c', [1.7, 1.1, 4], [0, 1.25, 0], '#a0392b', [0, .785, 0]], ['b', [.5, .8, .06], [0, -.3, 1.02], '#5b3a1e'], ['b', [.4, .4, .06], [-.65, .15, 1.02], '#9fd3ff'], ['b', [.4, .4, .06], [.65, .15, 1.02], '#9fd3ff']] },
+  foguete: { n: 'foguete', re: 'foguete|nave|ovni', def: '#eeeeee', p: [['y', [.5, .5, 2], [0, 0, 0]], ['c', [.5, .9], [0, 1.45, 0], '#d62828'], ['b', [1.4, .6, .1], [0, -.9, 0], '#d62828'], ['b', [.1, .6, 1.4], [0, -.9, 0], '#d62828'], ['s', [.2], [0, .4, .48], '#9fd3ff']] },
+  arvore: { n: 'árvore', re: 'arvore|pinheiro|palmeira', def: '#2e8b3d', p: [['y', [.15, .22, 1.2], [0, -.4, 0], '#6b4423'], ['s', [.9], [0, .7, 0]], ['s', [.65], [0, 1.45, 0]]] },
+  aviao: { n: 'avião', re: 'aviao|aeronave|jato', def: '#e8e8e8', p: [['y', [.25, .25, 2.4], [0, 0, 0], , [0, 0, 1.571]], ['c', [.25, .5], [1.45, 0, 0], '#d62828', [0, 0, -1.571]], ['b', [.6, .05, 2.6], [.1, 0, 0], '#d62828'], ['b', [.4, .05, .9], [-1, 0, 0], '#d62828'], ['b', [.3, .5, .05], [-1, .25, 0], '#d62828']] },
+  tetrahedron: { n: 'tetraedro', re: 'tetraedro', g: 1 }, octahedron: { n: 'octaedro', re: 'octaedro|diamante', g: 1 },
+  dodecahedron: { n: 'dodecaedro', re: 'dodecaedro', g: 1 }, icosahedron: { n: 'icosaedro', re: 'icosaedro', g: 1 },
+  star: { n: 'estrela', re: 'estrela', g: 1 }, heart: { n: 'coração', re: 'coracao', g: 1 }, knot: { n: 'nó toroidal', re: 'no toroidal|torus knot', g: 1 },
+  ring: { n: 'disco vazado', re: 'disco|anel vazado|arruela', g: 1 }, torus: { n: 'pulseira / anel', re: 'pulseira|anel|rosca|torus|rosquinha|donut', g: 1 },
+  pyramid: { n: 'pirâmide', re: 'piramide', g: 1 }, cube: { n: 'cubo', re: 'caixa|cubo|bloco|quadrado', g: 1 },
+  sphere: { n: 'esfera', re: 'bola|esfera|globo|orbe', g: 1 }, cylinder: { n: 'cilindro', re: 'cilindro|tubo|lata|barril', g: 1 },
+  cone: { n: 'cone', re: 'cone', g: 1 }, plane: { n: 'plano', re: 'plano|placa|chapa', g: 1 }
+};
+Object.values(R).forEach(o => o.rx = new RegExp('\\b(?:' + o.re + ')(?:e?s)?\\b'));
+$("selectForma").innerHTML = Object.entries(R).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join("");
+
+function rotulo(txt) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+  const g = c.getContext('2d'); g.font = 'bold 34px Arial'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(txt.slice(0, 16), 128, 42);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
+  sp.scale.set(2, .5, 1); return sp;
+}
+function objetoLivre(palavra, cor, mat) {
+  let h = 7; for (const ch of palavra) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const rd = () => (h = (h * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const g = new THREE.Group(), n = 3 + Math.floor(rd() * 3);
+  const base = cor || '#' + new THREE.Color().setHSL(rd(), .6, .55).getHexString();
+  let y = 0;
+  for (let i = 0; i < n; i++) {
+    const sz = (1.3 - i * .2) * (.7 + rd() * .6), t = Math.floor(rd() * 4);
+    const geo = t === 0 ? new THREE.BoxGeometry(sz * 1.4, sz, sz * 1.4) : t === 1 ? new THREE.SphereGeometry(sz * .7, 24, 16) : t === 2 ? new THREE.CylinderGeometry(sz * .5, sz * .7, sz, 20) : new THREE.ConeGeometry(sz * .7, sz, 20);
+    const m = mk(geo, base, mat); m.position.y = y + sz / 2; y += sz * .85; g.add(m);
+  }
+  const lb = rotulo(palavra); lb.position.y = y + .5; g.add(lb);
+  return g;
+}
+function construir(chave, cor, mat, palavra) {
+  const e = R[chave]; let g;
+  if (chave === 'livre') g = objetoLivre(palavra || 'coisa', cor, mat);
+  else if (e && e.g) { g = new THREE.Group(); g.add(mk(criarGeometria(chave), cor || $("corObjeto").value, mat)); }
+  else if (e && e.p) {
+    g = new THREE.Group(); const main = cor || e.def;
+    e.p.forEach(([t, d, pos, c, rot, sc]) => {
+      const geo = t === 'b' ? new THREE.BoxGeometry(...d) : t === 's' ? new THREE.SphereGeometry(d[0], 24, 16) : t === 'y' ? new THREE.CylinderGeometry(d[0], d[1], d[2], 20) : t === 'c' ? new THREE.ConeGeometry(d[0], d[1], d[2] || 24) : new THREE.TorusGeometry(d[0], d[1], 12, 40);
+      const m = mk(geo, c || main, c ? 'phong' : mat);
+      m.position.set(...pos); if (rot) m.rotation.set(...rot); if (sc) m.scale.set(...sc); g.add(m);
+    });
+  } else return null;
+  g.userData = { chave, cor: cor || null, material: mat, palavra, escala: 1 };
+  return g;
+}
+function descartar(o) {
+  o.traverse(n => { if (n.geometry) n.geometry.dispose(); if (n.material) { if (n.material.map) n.material.map.dispose(); n.material.dispose(); } });
+  if (o.parent) o.parent.remove(o);
+}
+function limparCena3D() { if (grupoProjeto3D) while (grupoProjeto3D.children.length) descartar(grupoProjeto3D.children[0]); }
+function desfazer3D() {
+  if (!grupoProjeto3D || !grupoProjeto3D.children.length) return jadeDiz("Não há nada para desfazer.");
+  descartar(grupoProjeto3D.children[grupoProjeto3D.children.length - 1]); enquadrar();
+}
+function enquadrar() {
+  if (!controls3D || !grupoProjeto3D.children.length) return;
+  const b = new THREE.Box3().setFromObject(grupoProjeto3D), c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3());
+  controls3D.target.copy(c); camera3D.position.set(c.x, c.y + sz.y * .25, c.z + Math.max(sz.x, sz.y, sz.z) * 1.5 + 2.5); controls3D.update();
+}
+function inserir(obj, k) {
+  obj.scale.setScalar(k); obj.userData.escala = k; obj.position.set(0, 0, 0); obj.updateMatrixWorld(true);
+  const ob = new THREE.Box3().setFromObject(obj), oc = ob.getCenter(new THREE.Vector3());
+  let x = -oc.x;
+  if (grupoProjeto3D.children.length) x = new THREE.Box3().setFromObject(grupoProjeto3D).max.x + .4 - ob.min.x;
+  obj.position.set(x, -1 - ob.min.y, -oc.z);
+  grupoProjeto3D.add(obj); grupoProjeto3D.rotation.set(0, 0, 0); toque3D(); enquadrar();
+}
+function adicionarObjeto3D(chave, mat, cor, palavra, k) {
   if (!grupoProjeto3D) return;
-  if (!document.getElementById("chkMesclar").checked) limparCena3D();
-  
-  const tipo = document.getElementById("selectForma").value;
-  const mat = document.getElementById("selectMaterial").value;
-  const cor = document.getElementById("corObjeto").value;
-  
-  const mesh = new THREE.Mesh(criarGeometria(tipo), criarMaterial3D(mat, cor));
-  grupoProjeto3D.add(mesh);
-  resetarTimerInatividade3D();
+  if (!$("chkMesclar").checked) limparCena3D();
+  const o = construir(chave, cor, mat, palavra); if (o) inserir(o, k || 1);
 }
+const adicionarForma3DManual = () => { if (!modo3DAtivo) ativarModo3D(); adicionarObjeto3D($("selectForma").value, $("selectMaterial").value, $("corObjeto").value); };
 
-function limparCena3D() { 
-  if (grupoProjeto3D) {
-    while (grupoProjeto3D.children.length) {
-      const o = grupoProjeto3D.children[0];
-      if (o.geometry) o.geometry.dispose();
-      if (o.material) o.material.dispose();
-      grupoProjeto3D.remove(o);
-    }
-  }
+/* --- extras 3D: wireframe, PNG, projetos --- */
+function alternarWire() {
+  wire = !wire;
+  grupoProjeto3D && grupoProjeto3D.traverse(n => { if (n.isMesh) n.material.wireframe = wire; });
 }
-
+function baixarPNG() {
+  if (!renderer3D || !grupoProjeto3D.children.length) return jadeDiz("Crie algo no 3D antes de baixar a imagem.");
+  renderer3D.render(scene3D, camera3D);
+  const a = document.createElement("a"); a.href = renderer3D.domElement.toDataURL("image/png"); a.download = "jade-3d.png"; a.click();
+}
 function salvarProjeto3D() {
-  if (!grupoProjeto3D || !grupoProjeto3D.children.length) { alert("Não há objetos para salvar!"); return; }
-  const nome = prompt("Nome do projeto:", "Projeto Jade " + (memoria.projetos3D.length + 1));
-  if (!nome) return;
-  memoria.projetos3D.push({ nome, data: new Date().toLocaleDateString('pt-BR') });
+  if (!grupoProjeto3D || !grupoProjeto3D.children.length) return alert("Não há objetos no projeto 3D para salvar!");
+  const nome = prompt("Nome do projeto 3D:", "Projeto Jade " + (memoria.projetos3D.length + 1)); if (!nome) return;
+  memoria.projetos3D.push({ nome, data: new Date().toLocaleDateString('pt-BR'),
+    objetos: grupoProjeto3D.children.map(o => ({ chave: o.userData.chave, cor: o.userData.cor, material: o.userData.material, palavra: o.userData.palavra, escala: o.userData.escala, pos: o.position.toArray() })) });
   salvarMemoria();
-  jadeDiz(`Projeto 3D <b>"${esc(nome)}"</b> salvo na memória, Mestre!`);
+  jadeDiz(`Projeto <b>"${esc(nome)}"</b> salvo! Diga <i>"abrir projeto ${memoria.projetos3D.length}"</i> para carregá-lo.`, `Projeto ${nome} salvo!`);
+}
+function listarProjetos() {
+  const l = memoria.projetos3D;
+  jadeDiz(l.length ? "Seus projetos:<br>" + l.map((p, i) => `${i + 1}. ${esc(p.nome)} <small>(${esc(p.data)})</small>`).join("<br>") + "<br>Diga <i>abrir projeto N</i>." : "Você ainda não salvou nenhum projeto 3D.");
+}
+function abrirProjeto(i) {
+  const p = memoria.projetos3D[i]; if (!p) return jadeDiz("Não achei esse projeto. Diga <i>meus projetos</i> para ver a lista.");
+  ativarModo3D(); limparCena3D();
+  p.objetos.forEach(o => { const g = construir(o.chave, o.cor, o.material || 'phong', o.palavra); if (!g) return; g.scale.setScalar(o.escala || 1); g.userData.escala = o.escala || 1; g.position.fromArray(o.pos); grupoProjeto3D.add(g); });
+  enquadrar(); jadeDiz(`Projeto <b>${esc(p.nome)}</b> carregado!`, "Projeto carregado!");
 }
 
-/* ================= COMANDOS E INTERAÇÃO ================= */
-function processarComando(txt) {
+/* --- interpretação da fala/texto no Modo 3D --- */
+const CORES = { vermelh: "#e02424", azul: "#2563eb", verde: "#16a34a", amarel: "#facc15", laranj: "#f97316", roxo: "#8b3dff", lilas: "#b39ddb", rosa: "#ec4899", branc: "#f5f5f5", pret: "#222222", dourad: "#d4af37", prat: "#c0c0c0", ciano: "#06b6d4", cinza: "#888888", marrom: "#8b5a2b" };
+const TAM = [[/\b(gigante|enorme|imenso)\b/, 2.2], [/\bgrande\b/, 1.5], [/\b(mini|minusculo)\b/, .35], [/\bpequen\w*\b/, .6]];
+const MATS = [[/\b(metal\w*|aco|ferro|cromad\w*)\b/, 'standard'], [/\b(vidro|cristal|transparente)\b/, 'glass']];
+const PEDIDO3D = /\b(cri\w+|ger\w+|mont\w+|constru\w+|desenh\w+|model\w+|adicion\w+|faz\w*|faca\w*|mostr\w+|3d)\b/;
+const FILL = new Set("um uma o a de do da 3d modelo objeto coisa de para pra me um uma quero preciso".split(" "));
+
+function acharObjeto(t) { return Object.keys(R).find(k => R[k].rx.test(t)) || null; }
+function processarModo3DTexto(txt) {
+  ativarModo3D();
   const t = normalizar(txt);
-  if (t.includes("3d") || t.includes("tres d") || t.includes("modo 3d")) {
-    ativarModo3D();
-    return;
+  let cor = null, k = 1, mat = $("selectMaterial").value;
+  for (const [p, hex] of Object.entries(CORES)) if (new RegExp('\\b' + p).test(t)) { cor = hex; break; }
+  for (const [rx, v] of TAM) if (rx.test(t)) { k = v; break; }
+  for (const [rx, v] of MATS) if (rx.test(t)) { mat = v; break; }
+  let chave = acharObjeto(t), palavra = chave ? R[chave].n : null;
+  if (!chave) {
+    const sobra = t.split(" ").filter(w => w.length > 2 && !FILL.has(w) && !PEDIDO3D.test(w) && !Object.keys(CORES).some(c => w.startsWith(c)) && !TAM.some(([rx]) => rx.test(w)));
+    if (!sobra.length) return jadeDiz("Diga o que criar, por exemplo: <i>crie um robô azul</i>.");
+    chave = 'livre'; palavra = sobra.slice(-1)[0];
   }
-  if (t.includes("horas")) {
-    jadeDiz(`Agora são exatamente <b>${new Date().toLocaleTimeString('pt-BR')}</b>.`);
-    return;
-  }
-  if (t.includes("piada")) {
-    const piadas = [
-      "Por que o computador foi ao médico? Porque estava com um vírus!",
-      "O que o código falou para o desenvolvedor? 'Você não me entende!'",
-      "Existem 10 tipos de pessoas no mundo: as que entendem binário e as que não entendem."
-    ];
-    jadeDiz(rnd(piadas));
-    return;
-  }
-  jadeDiz(`Recebi seu comando: "<i>${esc(txt)}</i>". Para ver a imagem/objeto 3D girando após 10s de inatividade, abra o <b>Modo 3D</b>.`);
+  adicionarObjeto3D(chave, mat, cor, palavra, k);
+  const img = `https://image.pollinations.ai/prompt/${encodeURIComponent(palavra + ' 3d render high quality')}?width=400&height=250&nologo=true`;
+  jadeDiz(`Criei <b>${esc(palavra)}</b>${chave === 'livre' ? ' (interpretação livre)' : ''}, ${chamar()}!`, `${palavra} criado!`, img);
 }
 
-function enviar() {
-  const txt = inputEl.value.trim();
-  if (!txt) return;
-  escrever(txt, "user");
-  inputEl.value = "";
-  processarComando(txt);
+/* ================= CÉREBRO DA JADE ================= */
+const PIADAS = ["Por que o robô foi ao médico? Estava com vírus!", "O que o JS disse pro CSS? Você me dá estilo!", "Por que o programador saiu pro café? Para dar um break.", "Existem 10 tipos de pessoas: as que entendem binário e as que não."];
+const AJUDA = `<b>O que sei fazer</b><br>• <i>nova tarefa: comprar pão</i> · <i>minhas tarefas</i> · <i>concluir tarefa 1</i><br>• <i>quanto é 12*7+3</i><br>• <i>meu nome é Ana</i><br>• <i>ensinar</i> (você me ensina perguntas e respostas)<br>• <i>modo 3D</i> · <i>crie um camaro amarelo de metal</i> · <i>meus projetos</i><br>• hora, data, piada`;
+
+function aprenderFluxo(txt) {
+  if (aprendendo === 1) { perguntaTemp = txt; aprendendo = 2; return jadeDiz("Certo! E qual deve ser a minha resposta?"); }
+  memoria.conhecimentos.push({ p: perguntaTemp, r: txt }); aprendendo = 0; salvarMemoria();
+  jadeDiz(`Aprendi! Se você perguntar algo parecido com "<i>${esc(perguntaTemp)}</i>", eu respondo.`, "Aprendi!");
+}
+function calcular(txt) {
+  const e = txt.replace(/(quanto\s+[eé]|calcule|calcular)/gi, "").replace(/[x×]/gi, "*").replace(/÷/g, "/").replace(/,/g, ".").replace(/\^/g, "**").replace(/[=?]/g, "").trim();
+  if (!/^[\d\s+\-*/().%]+$/.test(e) || !/[+\-*/%]/.test(e) || !/\d/.test(e)) return null;
+  try { const v = Function('"use strict";return (' + e + ')')(); return Number.isFinite(v) ? Math.round(v * 1e8) / 1e8 : null; } catch (_) { return null; }
 }
 
-function limparMemoria() {
-  if (confirm("Deseja apagar a memória da Jade IA?")) {
-    memoria = { conhecimentos: [], tarefas: [], projetos3D: [], perfil: {} };
-    salvarMemoria();
-    jadeDiz("Memória resetada!");
+function processarComando(txt) {
+  txt = txt.trim(); if (!txt) return;
+  escrever(txt, "user"); inputEl.value = "";
+  const n = normalizar(txt);
+  let m;
+
+  if (aprendendo) return aprenderFluxo(txt);
+  if (/^(cancelar|esquece)$/.test(n)) return jadeDiz("Ok, cancelado.");
+
+  if ((m = txt.match(/(?:meu nome (?:é|e)|me chame de|pode me chamar de)\s+([^\s,.!?]+)/i))) {
+    memoria.perfil.nome = m[1]; salvarMemoria(); return jadeDiz(`Prazer, <b>${esc(m[1])}</b>! Vou te chamar assim.`);
   }
-}
+  if ((m = txt.match(/^(?:nova|adicionar?|anotar|criar)\s+tarefa\s*[:\-]?\s*(.+)/i))) {
+    memoria.tarefas.push({ t: m[1].trim(), feita: false }); salvarMemoria(); return jadeDiz(`Tarefa anotada: <b>${esc(m[1].trim())}</b>`);
+  }
+  if ((m = n.match(/^(concluir|terminar|feita|remover|apagar|excluir)\s+tarefa\s+(\d+)/))) {
+    const i = +m[2] - 1, t = memoria.tarefas[i]; if (!t) return jadeDiz("Não encontrei essa tarefa.");
+    if (m[1] === "remover" || m[1] === "apagar" || m[1] === "excluir") memoria.tarefas.splice(i, 1); else t.feita = true;
+    salvarMemoria(); return jadeDiz("Pronto! Tarefa atualizada.");
+  }
+  if (/\btarefas?\b/.test(n) && !PEDIDO3D.test(n)) {
+    memoria.tarefas = memoria.tarefas.map(t => typeof t === "string" ? { t, feita: false } : t);
+    return jadeDiz(memoria.tarefas.length ? "Suas tarefas:<br>" + memoria.tarefas.map((t, i) => `${i + 1}. ${t.feita ? "✅ <s>" + esc(t.t) + "</s>" : esc(t.t)}`).join("<br>") : "Nenhuma tarefa. Diga <i>nova tarefa: ...</i>");
+  }
+  const calc = calcular(txt);
+  if (calc !== null) return jadeDiz(`Resultado: <b>${calc}</b>`, `O resultado é ${calc}`);
 
-/* ================= ATALHOS DE TECLADO ================= */
-inputEl.addEventListener("keydown", e => { if (e.key === "Enter") enviar(); });
-window.addEventListener("keydown", e => {
-  if (document.activeElement === inputEl) return;
-  const k = e.key.toLowerCase();
-  if (k === "t") { e.preventDefault(); ativarModo3D(); }
-  else if (k === "n") { e.preventDefault(); fecharModo3D(); }
-});
+  if (/^(ensinar|aprender|aprenda|quero te ensinar)/.test(n)) { aprendendo = 1; return jadeDiz("Vamos lá! Qual pergunta você quer me ensinar?"); }
+  if (/\b(meus )?projetos?\b/.test(n) && /\b(meus|listar|lista|ver)\b/.test(n)) return listarProjetos();
+  if ((m = n.match(/abrir projeto (\d+)/))) return abrirProjeto(+m[1] - 1);
+  if (/\b(desfazer|desfaca)\b/.test(n) && modo3DAtivo) return desfazer3D();
+  if (/\b(limpar|apagar) (a )?cena\b/.test(n)) return limparCena3D();
+  if (/\b(fechar|sair)\b.*3d/.test(n)) return fecharModo3D();
+
+  const obj = acharObjeto(n);
+  if (/\bmodo 3d\b|^3d$|\bestudio\b/.test(n) && !obj) return ativarModo3D();
+  if (PEDIDO3D.test(n) && (obj || modo3DAtivo || /3d/.test(n) || /\b(cri\w+|mont\w+|desenh\w+|constru\w+)\b/.test(n))) return processarModo3DTexto(txt);
+
+  if (/\bhoras?\b/.test(n)) return jadeDiz(`Agora são <b>${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b>.`);
+  if (/\b(data|dia)\b.*\bhoje\b|\bque dia\b/.test(n)) return jadeDiz(`Hoje é <b>${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</b>.`);
+  if (/piada/.test(n)) return jadeDiz(rnd(PIADAS));
+  if (/\b(ajuda|comandos|o que voce faz)\b/.test(n)) return jadeDiz(AJUDA);
+  if (/^(oi|ola|e ai|opa|bom dia|boa tarde|boa noite)\b/.test(n)) return jadeDiz(`${saudacao()}, ${chamar()}! Em que posso ajudar?`);
+  if (/\b(obrigad\w+|valeu)\b/.test(n)) return jadeDiz("Por nada!");
+
+  let melhor = null, sc = 0;
+  memoria.conhecimentos.forEach(c => { const s = similaridade(c.p, txt); if (s > sc) { sc = s; melhor = c; } });
+  if (melhor && sc >= .7) return jadeDiz(esc(melhor.r));
+  jadeDiz(`Ainda não sei responder isso, ${chamar()}. Diga <i>ensinar</i> para me ensinar, ou <i>ajuda</i> para ver meus comandos.`);
+}
+const enviar = () => processarComando(inputEl.value);
+
+/* ================= MICROFONE (segurar para falar) ================= */
+function iniciarGravacao() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return jadeDiz("Seu navegador não suporta reconhecimento de voz. Tente o Chrome.");
+  if (gravacaoAtiva) return;
+  rec = new SR(); rec.lang = "pt-BR";
+  rec.onstart = () => { gravacaoAtiva = true; btnMic.classList.add("recording"); };
+  rec.onresult = e => processarComando(e.results[0][0].transcript);
+  rec.onerror = () => pararGravacao();
+  rec.onend = () => { gravacaoAtiva = false; btnMic.classList.remove("recording"); rec = null; };
+  try { rec.start(); } catch (e) { rec = null; }
+}
+function pararGravacao() { if (rec) { try { rec.stop(); } catch (e) {} } }
+btnMic.addEventListener("pointerdown", e => { e.preventDefault(); iniciarGravacao(); });
+["pointerup", "pointerleave", "pointercancel"].forEach(ev => btnMic.addEventListener(ev, pararGravacao));
+btnMic.addEventListener("contextmenu", e => e.preventDefault());
+
+renderChips();
+jadeDiz(`${saudacao()}, ${chamar()}! Diga <i>ajuda</i> para ver o que eu faço.`, `${saudacao()}!`);
 </script>
 </body>
 </html>
+
