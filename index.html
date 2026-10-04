@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jade IA 2.0 - 3D Studio Pro</title>
+<title>Jade IA 2.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
 *{box-sizing:border-box}
 body{background:#0d0814;font-family:'Segoe UI',Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;padding:15px;color:#fff}
-.app{width:100%;max-width:580px;background:#181124;padding:20px;border-radius:20px;border:1px solid #3b235d;box-shadow:0 10px 30px rgba(0,0,0,.8),0 0 15px rgba(138,43,226,.2);display:flex;flex-direction:column;gap:15px}
+.app{width:100%;max-width:550px;background:#181124;padding:20px;border-radius:20px;border:1px solid #3b235d;box-shadow:0 10px 30px rgba(0,0,0,.8),0 0 15px rgba(138,43,226,.2);display:flex;flex-direction:column;gap:15px}
 .header{text-align:center}
 h1{color:#b366ff;margin:0;font-size:26px;text-shadow:0 0 8px rgba(179,102,255,.4)}
 .subtitle{color:#a0a0b0;font-size:13px;margin-top:4px;font-weight:500}
@@ -17,12 +17,12 @@ h1{color:#b366ff;margin:0;font-size:26px;text-shadow:0 0 8px rgba(179,102,255,.4
 .msg{max-width:90%;padding:10px 14px;border-radius:15px;font-size:14px;line-height:1.45;word-wrap:break-word}
 .msg-jade{align-self:flex-start;background:#251638;color:#f0e6ff;border-bottom-left-radius:2px;border:1px solid #4c287a}
 .msg-user{align-self:flex-end;background:#7928ca;color:#fff;border-bottom-right-radius:2px}
-.msg-img-base{width:100%;max-width:280px;border-radius:10px;margin-top:8px;border:1px solid #7928ca;display:block}
+.msg-img-base{width:100%;max-width:260px;border-radius:10px;margin-top:8px;border:1px solid #7928ca;display:block}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{background:#181124;border:1px solid #3b235d;color:#c9a8ff;padding:5px 10px;border-radius:14px;font-size:11px;cursor:pointer}
 .chip:hover{background:#251638}
 #container-3d{display:none;background:#05020a;border:1px solid #7928ca;border-radius:14px;padding:10px;flex-direction:column;gap:10px}
-#canvas-3d{width:100%;height:260px;border-radius:10px;background:#000;touch-action:none;position:relative}
+#canvas-3d{width:100%;height:250px;border-radius:10px;background:#000;touch-action:none}
 .controles-3d{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .controles-3d select,.controles-3d input,.controles-3d button{background:#181124;border:1px solid #3b235d;color:#fff;padding:6px;border-radius:8px;font-size:12px}
 .checkbox-container{grid-column:span 2;display:flex;align-items:center;gap:8px;font-size:12px;color:#0fc}
@@ -50,27 +50,32 @@ button:active{transform:scale(.95)}
 
   <div id="container-3d">
     <div style="display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:13px;font-weight:bold;color:#b366ff;">Modo Visualizador 3D Avançado</span>
+      <span style="font-size:13px;font-weight:bold;color:#b366ff;">Modo 01110100 - Visualizador 3D</span>
       <button style="padding:2px 8px;font-size:10px;" onclick="fecharModo3D()">Fechar 3D</button>
     </div>
     <div id="canvas-3d"></div>
     <div class="controles-3d">
       <select id="selectForma">
-        <option value="camaro">Camaro / Esportivo</option>
+        <option value="camaro">Camaro Esportivo</option>
         <option value="carro">Carro Convencional</option>
-        <option value="robo">Robô Humanoide</option>
-        <option value="casa">Casa Moderna</option>
-        <option value="foguete">Foguete Espacial</option>
-        <option value="torus">Torus (Anel)</option>
+        <option value="torus">Pulseira / Torus (Anel)</option>
         <option value="cube">Cubo / Bloco</option>
-        <option value="sphere">Esfera / Orbe</option>
+        <option value="sphere">Esfera / Bola</option>
+        <option value="cylinder">Cilindro / Tubo</option>
+        <option value="cone">Cone / Pirâmide</option>
+        <option value="tetrahedron">Tetraedro (4 Faces)</option>
+        <option value="octahedron">Octaedro (8 Faces)</option>
+        <option value="dodecahedron">Dodecaedro (12 Faces)</option>
+        <option value="icosahedron">Icosaedro (20 Faces)</option>
+        <option value="plane">Plano / Superfície</option>
+        <option value="ring">Anel / Disco Vazado</option>
       </select>
       <select id="selectMaterial">
         <option value="phong">Brilhante (Padrão)</option>
         <option value="standard">Metálico</option>
         <option value="glass">Vidro / Reflexivo</option>
       </select>
-      <input type="color" id="corObjeto" value="#facc15">
+      <input type="color" id="corObjeto" value="#b366ff">
       <button onclick="adicionarForma3DManual()">Adicionar Forma</button>
       <div class="checkbox-container">
         <input type="checkbox" id="chkMesclar">
@@ -85,13 +90,13 @@ button:active{transform:scale(.95)}
   <div class="chips" id="chips"></div>
 
   <div class="input-box">
-    <input id="mensagem" type="text" placeholder="Converse ou peça: 'Crie um camaro amarelo 3D'..." autocomplete="off">
+    <input id="mensagem" type="text" placeholder="Converse, peça um comando ou use atalhos..." autocomplete="off">
     <button onclick="enviar()">Enviar</button>
     <button id="btnOuvir" class="btn-mic" onmousedown="iniciarGravacao()" onmouseup="pararGravacao()" onmouseleave="pararGravacao()" ontouchstart="iniciarGravacao(event)" ontouchend="pararGravacao(event)">Falar</button>
   </div>
 
   <div class="footer-actions">
-    <span class="shortcut-hint"><b>C</b> falar | <b>V</b> status | <b>T</b> 3D | <b>N</b> voltar</span>
+    <span class="shortcut-hint"><b>C</b> falar | <b>V</b> status | <b>M</b> site | <b>T</b> 3D | <b>N</b> voltar</span>
     <span>
       <button class="btn-clear" id="btnVoz" onclick="alternarVoz()">Voz: ligada</button> &nbsp;
       <button class="btn-clear" onclick="limparMemoria()">Resetar aprendizado</button>
@@ -100,14 +105,15 @@ button:active{transform:scale(.95)}
 </div>
 
 <script>
-/* ================= ESTADO E MEMÓRIA ================= */
+/* ================= ESTADO ================= */
 let memoria = { conhecimentos: [], tarefas: [], projetos3D: [], perfil: {} };
 try { Object.assign(memoria, JSON.parse(localStorage.getItem("jade_memoria")) || {}); } catch (e) {}
 memoria.perfil = memoria.perfil || {};
-
+let modoAprendizado = false, etapaAprendizado = 0, perguntaTemp = "";
 let gravacaoAtiva = false, rec = null, vozLigada = true;
 let modo3DAtivo = false, scene3D, camera3D, renderer3D, grupoProjeto3D, controls3D, animId3D = null;
-let ultimoToque3D = Date.now(), autoGirar3D = false;
+let ultimoToque3D = Date.now();
+const ctx = { ultimoTema: null, historico: [], msgs: 0 };
 
 const inputEl = document.getElementById("mensagem");
 const chatEl = document.getElementById("chat");
@@ -122,6 +128,29 @@ function normalizar(txt) {
   return String(txt).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/(.)\1{2,}/g, "$1").replace(/[?!=.,;:]/g, " ").replace(/\s+/g, " ").trim();
 }
+const STOP = new Set("a o as os um uma de do da dos das em no na nos nas por para pra com que e eh me te se ao aos jade voce vc mestre porque pq favor pode poderia queria quero gostaria".split(" "));
+const tokens = t => normalizar(t).split(" ").filter(w => w && !STOP.has(w));
+
+function lev(a, b) {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m || !n) return Math.max(m, n);
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++)
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+const similaridade = (a, b) => { a = normalizar(a); b = normalizar(b); const mx = Math.max(a.length, b.length); return mx ? 1 - lev(a, b) / mx : 1; };
+
+function saudacaoHora() {
+  const h = new Date().getHours();
+  return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+}
+const chamar = () => memoria.perfil.nome ? esc(memoria.perfil.nome) : "Mestre";
 
 /* ================= VOZ / CHAT ================= */
 function alternarVoz() {
@@ -133,37 +162,39 @@ function alternarVoz() {
 function falar(texto) {
   if (!vozLigada || !('speechSynthesis' in window)) return;
   let t = texto.replace(/<small>.*?<\/small>/g, ' ').replace(/<[^>]*>?/gm, ' ').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim();
-  if (t.length > 220) t = t.substring(0, 220).replace(/\s\S*$/, "") + "...";
+  if (t.length > 220) t = t.substring(0, 220).replace(/\s\S*$/, "") + "... o restante está no chat!";
   speechSynthesis.cancel();
   const v = new SpeechSynthesisUtterance(t);
-  v.lang = "pt-BR"; v.pitch = 1.1; v.rate = 1.0;
+  v.lang = "pt-BR"; v.pitch = 1.2; v.rate = 1.0;
+  const fem = speechSynthesis.getVoices().find(x => x.lang.includes("pt") && /Luciana|Yelda|Google português|Maria|Helena|Francisca/.test(x.name));
+  if (fem) v.voice = fem;
   speechSynthesis.speak(v);
 }
 
-function escrever(texto, remetente, imgUrl) {
+function escrever(texto, remetente, cru, imgUrl) {
   const div = document.createElement("div");
   div.classList.add("msg");
   if (remetente === "user") {
     div.classList.add("msg-user");
-    div.innerHTML = `<b>Mestre:</b> ${esc(texto)}`;
+    div.innerHTML = `<b>Mestre:</b> ${cru ? texto : esc(texto)}`;
   } else {
     div.classList.add("msg-jade");
-    let conteudo = `<b>Jade:</b> ${texto}`;
+    let html = `<b>Jade:</b> ${texto}`;
     if (imgUrl) {
-      conteudo += `<br><small style="color:#b366ff;margin-top:5px;display:block;">🖼️ <b>Imagem usada de base:</b></small>
-                   <img src="${imgUrl}" class="msg-img-base" alt="Imagem base 3D" loading="lazy">`;
+      html += `<br><small style="color:#b366ff;margin-top:6px;display:block;">🖼️ <b>Imagem usada como base:</b></small>
+               <img src="${imgUrl}" class="msg-img-base" alt="Imagem Base" loading="lazy">`;
     }
-    div.innerHTML = conteudo;
+    div.innerHTML = html;
   }
   chatEl.appendChild(div);
   chatEl.scrollTop = chatEl.scrollHeight;
   return div;
 }
 
-function jadeDiz(html, voz, imgUrl) { escrever(html, "jade", imgUrl); falar(voz || html); }
+function jadeDiz(html, voz, imgUrl) { escrever(html, "jade", false, imgUrl); falar(voz || html); }
 
 function renderChips() {
-  const sugestoes = ["Crie um camaro amarelo", "Crie um robô azul 3D", "Desenhe um foguete", "Modo 3D", "Limpar 3D"];
+  const sugestoes = ["Que horas são?", "Conte uma piada", "Minhas tarefas", "Modo 3D", "Ajuda"];
   const box = document.getElementById("chips");
   box.innerHTML = "";
   sugestoes.forEach(s => {
@@ -174,70 +205,59 @@ function renderChips() {
   });
 }
 
-/* ================= ATALHOS DE TECLADO ================= */
+/* ================= ATALHOS ================= */
 inputEl.addEventListener("keydown", e => { if (e.key === "Enter") enviar(); });
 window.addEventListener("keydown", e => {
   if (document.activeElement === inputEl) return;
   const k = e.key.toLowerCase();
   if (k === "c" && !gravacaoAtiva) iniciarGravacao();
+  else if (k === "v") gerarRelatorioMestre();
+  else if (k === "m") { e.preventDefault(); prepararAberturaSite(); }
   else if (k === "t") { e.preventDefault(); ativarModo3D(); }
+  else if (k === "n") { e.preventDefault(); voltarParaJade(); }
 });
+window.addEventListener("keyup", e => { if (e.key.toLowerCase() === "c" && gravacaoAtiva) pararGravacao(); });
 
 function limparMemoria() {
-  if (confirm("Mestre, deseja apagar o aprendizado e projetos salvos?")) {
+  if (confirm("Mestre, deseja apagar todo o aprendizado, tarefas, perfil e projetos 3D salvos?")) {
     memoria = { conhecimentos: [], tarefas: [], projetos3D: [], perfil: {} };
     salvarMemoria();
-    jadeDiz("Minha memória foi totalmente restaurada, Mestre!");
+    jadeDiz("Toda a minha memória foi limpa, Mestre! Recomeçando do zero.");
   }
 }
 
-/* ================= MÓDULO 3D & AUTO-ROTAÇÃO ================= */
-function registrarInteracao3D() {
-  ultimoToque3D = Date.now();
-  autoGirar3D = false;
-}
+/* ================= MÓDULO 3D ================= */
+function registrarToque3D() { ultimoToque3D = Date.now(); }
 
 function inicializarCena3D() {
   const c = document.getElementById("canvas-3d");
   c.innerHTML = "";
   if (animId3D) cancelAnimationFrame(animId3D);
-  if (typeof THREE === "undefined") { c.innerHTML = "<p style='padding:10px;font-size:12px'>Three.js indisponível.</p>"; return; }
-
+  if (typeof THREE === "undefined") { c.innerHTML = "<p style='padding:10px;font-size:12px'>Three.js não carregou. Verifique a internet.</p>"; return; }
   scene3D = new THREE.Scene();
   camera3D = new THREE.PerspectiveCamera(60, c.clientWidth / c.clientHeight, 0.1, 1000);
-  camera3D.position.set(0, 2, 5);
-
+  camera3D.position.set(0, 0, 5);
   renderer3D = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer3D.setSize(c.clientWidth, c.clientHeight);
   renderer3D.setPixelRatio(window.devicePixelRatio);
   c.appendChild(renderer3D.domElement);
-
   controls3D = new THREE.OrbitControls(camera3D, renderer3D.domElement);
   controls3D.enableDamping = true; controls3D.dampingFactor = 0.05;
+  controls3D.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 
-  // Eventos de detecção de toque/interação (Inatividade de 10s)
-  controls3D.addEventListener('start', registrarInteracao3D);
-  renderer3D.domElement.addEventListener('pointerdown', registrarInteracao3D);
-  renderer3D.domElement.addEventListener('touchstart', registrarInteracao3D);
+  controls3D.addEventListener('start', registrarToque3D);
+  renderer3D.domElement.addEventListener('pointerdown', registrarToque3D);
+  renderer3D.domElement.addEventListener('touchstart', registrarToque3D);
 
-  const luz = new THREE.DirectionalLight(0xffffff, 1.2); luz.position.set(5, 10, 7); scene3D.add(luz);
-  scene3D.add(new THREE.AmbientLight(0xffffff, 0.8));
-
+  const luz = new THREE.DirectionalLight(0xffffff, 1); luz.position.set(5, 5, 5).normalize(); scene3D.add(luz);
+  scene3D.add(new THREE.AmbientLight(0x404040, 1.5));
   grupoProjeto3D = new THREE.Group(); scene3D.add(grupoProjeto3D);
 
-  // Loop de Renderização com lógica de Inatividade de 10 segundos
   (function loop() {
     animId3D = requestAnimationFrame(loop);
-    
-    // Verificação de 10 segundos sem toque para iniciar auto-rotação leve
-    if (Date.now() - ultimoToque3D > 10000) {
-      autoGirar3D = true;
+    if (Date.now() - ultimoToque3D > 10000 && grupoProjeto3D) {
+      grupoProjeto3D.rotation.y += 0.005;
     }
-
-    if (autoGirar3D && grupoProjeto3D) {
-      grupoProjeto3D.rotation.y += 0.005; // Gira suavemente no eixo Y
-    }
-
     controls3D.update();
     renderer3D.render(scene3D, camera3D);
   })();
@@ -247,157 +267,202 @@ function ativarModo3D() {
   modo3DAtivo = true;
   document.getElementById("container-3d").style.display = "flex";
   inicializarCena3D();
-  jadeDiz("Modo 3D ativado, Mestre! O modelo começará a girar se não for tocado por 10 segundos.", "Estúdio 3D ativado!");
+  jadeDiz("[Modo 01110100] Estúdio 3D ativado, Mestre! Peça qualquer modelo por texto ou voz: <i>\"crie um camaro amarelo\"</i>. Se ficar 10s sem tocar, o modelo começa a girar.", "Modo 3D ativado, Mestre!");
 }
-
-fecharModo3D = function() {
+function fecharModo3D() {
   modo3DAtivo = false;
   document.getElementById("container-3d").style.display = "none";
   if (animId3D) cancelAnimationFrame(animId3D);
-};
-
-/* ================= GERADOR DE MATERIAIS & FORMAS ================= */
-function criarMaterial3D(tipo, hex) {
-  const color = new THREE.Color(hex), side = THREE.DoubleSide;
-  if (tipo === 'standard') return new THREE.MeshStandardMaterial({ color, roughness: .3, metalness: .8, side });
-  if (tipo === 'glass') return new THREE.MeshPhysicalMaterial({ color, roughness: .1, transmission: .9, opacity: 1, transparent: true, side });
-  return new THREE.MeshPhongMaterial({ color, shininess: 80, side });
 }
 
-const mk = (geo, cor, mat) => new THREE.Mesh(geo, criarMaterial3D(mat, cor));
+const P4 = (x, z, f) => [[x, z], [-x, z], [x, -z], [-x, -z]].map(f);
 
-function criarGeometriaBase(t) {
+function criarGeometria(t) {
   switch (t) {
     case 'torus': return new THREE.TorusGeometry(1.2, 0.4, 16, 100);
     case 'cube': return new THREE.BoxGeometry(1.5, 1.5, 1.5);
     case 'sphere': return new THREE.SphereGeometry(1.2, 32, 32);
-    default: return new THREE.BoxGeometry(1.2, 1.2, 1.2);
+    case 'cylinder': return new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
+    case 'cone': return new THREE.ConeGeometry(1, 2, 32);
+    case 'pyramid': { const g = new THREE.ConeGeometry(1.4, 2, 4); g.rotateY(Math.PI / 4); return g; }
+    case 'tetrahedron': return new THREE.TetrahedronGeometry(1.5);
+    case 'octahedron': return new THREE.OctahedronGeometry(1.5);
+    case 'dodecahedron': return new THREE.DodecahedronGeometry(1.3);
+    case 'icosahedron': return new THREE.IcosahedronGeometry(1.3);
+    case 'plane': return new THREE.PlaneGeometry(2, 2);
+    case 'ring': return new THREE.RingGeometry(0.5, 1.5, 32);
+    case 'lozenge': { const g = new THREE.OctahedronGeometry(1.4); g.scale(.7, 1.3, .7); return g; }
+    case 'egg': { const g = new THREE.SphereGeometry(1, 32, 32); g.scale(.85, 1.2, .85); return g; }
+    case 'knot': return new THREE.TorusKnotGeometry(.9, .3, 100, 16);
+    case 'prism3': case 'prism5': case 'prism6': case 'prism8': { const g = new THREE.CylinderGeometry(1.2, 1.2, 1, +t.slice(5)); g.rotateX(Math.PI / 2); return g; }
+    case 'helix': {
+      class Hel extends THREE.Curve { getPoint(u, o = new THREE.Vector3()) { const a = u * Math.PI * 8; return o.set(Math.cos(a) * .8, u * 3 - 1.5, Math.sin(a) * .8); } }
+      return new THREE.TubeGeometry(new Hel(), 120, .12, 8, false);
+    }
+    case 'star': {
+      const sh = new THREE.Shape();
+      for (let i = 0; i < 10; i++) { const r = i % 2 ? .55 : 1.3, a = Math.PI / 5 * i + Math.PI / 2, x = Math.cos(a) * r, y = Math.sin(a) * r; i ? sh.lineTo(x, y) : sh.moveTo(x, y); }
+      const g = new THREE.ExtrudeGeometry(sh, { depth: .4, bevelEnabled: false }); g.center(); return g;
+    }
+    case 'heart': {
+      const sh = new THREE.Shape();
+      sh.moveTo(0, -1); sh.bezierCurveTo(-.2, -.7, -1.2, -.2, -1.2, .4); sh.bezierCurveTo(-1.2, 1.1, -.3, 1.3, 0, .7);
+      sh.bezierCurveTo(.3, 1.3, 1.2, 1.1, 1.2, .4); sh.bezierCurveTo(1.2, -.2, .2, -.7, 0, -1);
+      const g = new THREE.ExtrudeGeometry(sh, { depth: .5, bevelEnabled: false }); g.center(); return g;
+    }
+    default: return new THREE.BoxGeometry(1, 1, 1);
   }
 }
 
-/* Receitas Avançadas dos Modelos Procedurais */
-function construirModelosComplexos(chave, corPadrao, mat) {
-  const g = new THREE.Group();
-  const mainColor = corPadrao || "#facc15"; // Amarelo padrão caso seja Camaro
+function criarMaterial3D(tipo, hex) {
+  const color = new THREE.Color(hex), side = THREE.DoubleSide;
+  if (tipo === 'standard') return new THREE.MeshStandardMaterial({ color, roughness: .2, metalness: .8, side });
+  if (tipo === 'glass') return new THREE.MeshPhysicalMaterial({ color, roughness: .1, transmission: .9, opacity: 1, transparent: true, side });
+  return new THREE.MeshPhongMaterial({ color, shininess: 100, side });
+}
+const mk = (geo, cor, mat, principal) => { const m = new THREE.Mesh(geo, criarMaterial3D(mat, cor)); m.userData.principal = !!principal; return m; };
 
-  if (chave === 'camaro') {
-    // Corpo / Chassi Principal do Camaro
-    const chassi = mk(new THREE.BoxGeometry(2.6, 0.55, 1.3), mainColor, mat); chassi.position.y = 0.25; g.add(chassi);
-    // Teto esportivo/rebaixado
-    const teto = mk(new THREE.BoxGeometry(1.3, 0.45, 1.1), "#111111", mat); teto.position.set(-0.1, 0.65, 0); g.add(teto);
-    // Capô inclinado
-    const capo = mk(new THREE.BoxGeometry(0.9, 0.15, 1.25), mainColor, mat); capo.position.set(0.8, 0.42, 0); capo.rotation.z = -0.08; g.add(capo);
-    // Listras esportivas do Camaro (Preto)
-    const listra1 = mk(new THREE.BoxGeometry(2.5, 0.02, 0.22), "#111", 'phong'); listra1.position.set(0, 0.54, 0.25); g.add(listra1);
-    const listra2 = mk(new THREE.BoxGeometry(2.5, 0.02, 0.22), "#111", 'phong'); listra2.position.set(0, 0.54, -0.25); g.add(listra2);
-    // Rodas (4 Rodas esportivas)
-    const posRodas = [[0.8, 0.65], [0.8, -0.65], [-0.8, 0.65], [-0.8, -0.65]];
-    posRodas.forEach(([x, z]) => {
-      const roda = mk(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 24), "#222", 'standard');
-      roda.rotation.x = Math.PI / 2; roda.position.set(x, 0, z); g.add(roda);
-      const aro = mk(new THREE.CylinderGeometry(0.18, 0.18, 0.22, 16), "#ccc", 'standard');
-      aro.rotation.x = Math.PI / 2; aro.position.set(x, 0, z); g.add(aro);
-    });
-    // Faróis dianteiros
-    const f1 = mk(new THREE.BoxGeometry(0.05, 0.12, 0.25), "#00e5ff", 'phong'); f1.position.set(1.31, 0.32, 0.4); g.add(f1);
-    const f2 = mk(new THREE.BoxGeometry(0.05, 0.12, 0.25), "#00e5ff", 'phong'); f2.position.set(1.31, 0.32, -0.4); g.add(f2);
-  } else if (chave === 'carro') {
-    const chassi = mk(new THREE.BoxGeometry(2.2, 0.5, 1.1), mainColor, mat); g.add(chassi);
-    const cabine = mk(new THREE.BoxGeometry(1.1, 0.45, 0.95), "#bfe6ff", 'glass'); cabine.position.set(-0.1, 0.45, 0); g.add(cabine);
-    [[-0.6, 0.55], [-0.6, -0.55], [0.6, 0.55], [0.6, -0.55]].forEach(([x, z]) => {
-      const r = mk(new THREE.CylinderGeometry(0.28, 0.28, 0.18, 20), "#111", 'standard');
-      r.rotation.x = Math.PI / 2; r.position.set(x, -0.2, z); g.add(r);
-    });
-  } else if (chave === 'robo') {
-    const tronco = mk(new THREE.BoxGeometry(1, 1.2, 0.7), mainColor, mat); g.add(tronco);
-    const cabeca = mk(new THREE.BoxGeometry(0.6, 0.55, 0.5), "#cccccc", 'standard'); cabeca.position.y = 0.95; g.add(cabeca);
-    const olhar = mk(new THREE.BoxGeometry(0.4, 0.12, 0.1), "#00e5ff", 'phong'); olhar.position.set(0, 1.0, 0.26); g.add(olhar);
-    const bracoE = mk(new THREE.BoxGeometry(0.25, 0.9, 0.25), mainColor, mat); bracoE.position.set(-0.68, 0.1, 0); g.add(bracoE);
-    const bracoD = mk(new THREE.BoxGeometry(0.25, 0.9, 0.25), mainColor, mat); bracoD.position.set(0.68, 0.1, 0); g.add(bracoD);
-  } else if (chave === 'casa') {
-    const base = mk(new THREE.BoxGeometry(2, 1.4, 2), mainColor, mat); g.add(base);
-    const telhado = mk(new THREE.ConeGeometry(1.6, 1, 4), "#a0392b", mat); telhado.position.y = 1.2; telhado.rotation.y = Math.PI / 4; g.add(telhado);
-  } else if (chave === 'foguete') {
-    const corpo = mk(new THREE.CylinderGeometry(0.5, 0.5, 2.2, 24), mainColor, mat); g.add(corpo);
-    const topo = mk(new THREE.ConeGeometry(0.5, 0.8, 24), "#d62828", mat); topo.position.y = 1.5; g.add(topo);
-  } else {
-    g.add(mk(criarGeometriaBase(chave), mainColor, mat));
+const R = {
+  tetrahedron: { n: 'tetraedro', re: 'tetraedro|quatro lados', g: 1 },
+  octahedron: { n: 'octaedro', re: 'octaedro|diamante', g: 1 },
+  dodecahedron: { n: 'dodecaedro', re: 'dodecaedro', g: 1 },
+  icosahedron: { n: 'icosaedro', re: 'icosaedro|bola de futebol', g: 1 },
+  star: { n: 'estrela', re: 'estrela', g: 1 },
+  heart: { n: 'coração', re: 'coracao', g: 1 },
+  helix: { n: 'espiral', re: 'espiral|mola|helice', g: 1 },
+  knot: { n: 'nó toroidal', re: 'no toroidal|torus knot|no celta', g: 1 },
+  lozenge: { n: 'losango', re: 'losango', g: 1 },
+  egg: { n: 'ovo', re: 'ovo|elipsoide|ovoide|oval', g: 1 },
+  prism3: { n: 'triângulo', re: 'triangulo|prisma triangular', g: 1 },
+  prism5: { n: 'pentágono', re: 'pentagono', g: 1 },
+  prism6: { n: 'hexágono', re: 'hexagono|colmeia', g: 1 },
+  prism8: { n: 'octógono', re: 'octogono', g: 1 },
+  ring: { n: 'disco vazado', re: 'disco|anel vazado|arruela', g: 1 },
+  torus: { n: 'pulseira / anel', re: 'pulseira|anel|rosca|torus|rosquinha|coroa|aro|donut|pneu', g: 1 },
+  pyramid: { n: 'pirâmide', re: 'piramide', g: 1 },
+  cube: { n: 'cubo', re: 'caixa|cubo|bloco|quadrado|dado', g: 1 },
+  sphere: { n: 'esfera', re: 'bola|esfera|globo|orbe', g: 1 },
+  cylinder: { n: 'cilindro', re: 'cilindro|tubo|lata|barril', g: 1 },
+  cone: { n: 'cone', re: 'cone|chapeu', g: 1 },
+  plane: { n: 'plano', re: 'plano|placa|chapa|superficie', g: 1 },
+  camaro: { n: 'camaro', re: 'camaro|camaro amarelo|carro esportivo', def: '#facc15', p: [['b', [2.6, .55, 1.3], [0, .25, 0], 0], ['b', [1.3, .45, 1.1], '#111', [-.1, .65, 0]], ['b', [.9, .15, 1.25], 0, [.8, .42, 0], [0, 0, -.08]], ['b', [2.5, .02, .22], '#111', [0, .54, .25]], ['b', [2.5, .02, .22], '#111', [0, .54, -.25]], ...P4(.8, .65, ([x, z]) => ['y', [.3, .3, .2], '#222', [x, 0, z], [1.571, 0, 0]])] },
+  carro: { n: 'carro', re: 'carro|automovel|veiculo|fusca|taxi', def: '#d62828', p: [['b', [2.4, .6, 1.1], [0, 0, 0], 0], ['b', [1.2, .5, 1], [-.1, .55, 0], '#bfe6ff'], ...P4(.8, .55, ([x, z]) => ['y', [.32, .32, .25], [x, -.3, z], '#111', [1.571, 0, 0]])] },
+  robo: { n: 'robô', re: 'robo|androide|ciborgue', def: '#5b8def', p: [['b', [1, 1.2, .7], [0, 0, 0], 0], ['b', [.7, .55, .6], [0, 1.05, 0], '#cfcfcf'], ['s', [.09], [-.18, 1.1, .31], '#00e5ff'], ['s', [.09], [.18, 1.1, .31], '#00e5ff'], ['y', [.03, .03, .4], [0, 1.5, 0], '#888'], ['s', [.08], [0, 1.75, 0], '#ff3b3b']] },
+  casa: { n: 'casa', re: 'casa|chale|moradia|residencia', def: '#e8d5b0', p: [['b', [2, 1.4, 2], [0, 0, 0], 0], ['c', [1.7, 1.1, 4], [0, 1.25, 0], '#a0392b', [0, .785, 0]], ['b', [.5, .8, .06], [0, -.3, 1.02], '#5b3a1e']] },
+  foguete: { n: 'foguete', re: 'foguete|nave|ovni', def: '#eeeeee', p: [['y', [.5, .5, 2], [0, 0, 0], 0], ['c', [.5, .9], [0, 1.45, 0], '#d62828'], ['b', [1.4, .6, .1], [0, -.9, 0], '#d62828']] }
+};
+Object.values(R).forEach(o => o.rx = new RegExp('\\b(?:' + o.re + ')(?:e?s)?\\b'));
+
+function rotulo(txt) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+  const g = c.getContext('2d'); g.font = 'bold 34px Arial'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(txt.slice(0, 16), 128, 42);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
+  sp.scale.set(2, .5, 1); return sp;
+}
+
+function objetoLivre(palavra, cor, mat) {
+  let h = 7; for (const ch of palavra) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const rd = () => (h = (h * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const g = new THREE.Group(), n = 3 + Math.floor(rd() * 3);
+  const base = cor || '#' + new THREE.Color().setHSL(rd(), .6, .55).getHexString();
+  let y = 0;
+  for (let i = 0; i < n; i++) {
+    const sz = (1.3 - i * .2) * (.7 + rd() * .6), t = Math.floor(rd() * 4);
+    const geo = t === 0 ? new THREE.BoxGeometry(sz * 1.4, sz, sz * 1.4) : t === 1 ? new THREE.SphereGeometry(sz * .7, 24, 16) : t === 2 ? new THREE.CylinderGeometry(sz * .5, sz * .7, sz, 20) : new THREE.ConeGeometry(sz * .7, sz, 20);
+    const m = mk(geo, base, mat, true); m.position.y = y + sz / 2; y += sz * .85; g.add(m);
   }
+  const lb = rotulo(palavra); lb.position.y = y + .5; g.add(lb);
+  return g;
+}
+
+function construir(chave, cor, mat, palavra) {
+  const e = R[chave]; let g;
+  if (chave === 'livre') g = objetoLivre(palavra || 'coisa', cor, mat);
+  else if (e && e.g) { g = new THREE.Group(); g.add(mk(criarGeometria(chave), cor || corObjeto.value, mat, true)); }
+  else if (e && e.p) {
+    g = new THREE.Group(); const main = cor || e.def || corObjeto.value;
+    e.p.forEach(([t, d, pos, c, rot, sc]) => {
+      const geo = t === 'b' ? new THREE.BoxGeometry(...d) : t === 's' ? new THREE.SphereGeometry(d[0], 24, 16) : t === 'y' ? new THREE.CylinderGeometry(d[0], d[1], d[2], 20) : t === 'c' ? new THREE.ConeGeometry(d[0], d[1], d[2] || 24) : new THREE.TorusGeometry(d[0], d[1], 12, 40);
+      const m = mk(geo, c || main, c ? 'phong' : mat, !c);
+      m.position.set(...pos); if (rot) m.rotation.set(...rot); if (sc) m.scale.set(...sc); g.add(m);
+    });
+  } else return null;
+  g.userData = { chave, cor: cor || null, material: mat, palavra, escala: 1 };
   return g;
 }
 
 function descartar(o) {
   o.traverse(n => {
-    if (n.geometry) n.geometry.dispose();
-    if (n.material) n.material.dispose();
+    if (n.geometry && !n.isSprite) n.geometry.dispose();
+    if (n.material) { if (n.material.map) n.material.map.dispose(); n.material.dispose(); }
   });
   if (o.parent) o.parent.remove(o);
 }
-
 function limparCena3D() { if (grupoProjeto3D) while (grupoProjeto3D.children.length) descartar(grupoProjeto3D.children[0]); }
 
-function inserirEEnquadrar(obj) {
-  limparCena3D();
+function enquadrar() {
+  if (!controls3D || !grupoProjeto3D || !grupoProjeto3D.children.length) return;
+  const b = new THREE.Box3().setFromObject(grupoProjeto3D), c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3());
+  const d = Math.max(sz.x, sz.y, sz.z) * 1.5 + 2.5;
+  controls3D.target.copy(c); camera3D.position.set(c.x, c.y + sz.y * .25, c.z + d); controls3D.update();
+}
+
+function inserir(obj, k) {
+  obj.scale.setScalar(k || 1); obj.userData.escala = k || 1; obj.position.set(0, 0, 0); obj.updateMatrixWorld(true);
+  const ob = new THREE.Box3().setFromObject(obj), oc = ob.getCenter(new THREE.Vector3());
+  let x = -oc.x;
+  if (grupoProjeto3D.children.length) x = new THREE.Box3().setFromObject(grupoProjeto3D).max.x + .4 - ob.min.x;
+  obj.position.set(x, -1 - ob.min.y, -oc.z);
   grupoProjeto3D.add(obj);
   grupoProjeto3D.rotation.set(0, 0, 0);
-  registrarInteracao3D(); // Reset do tempo de inatividade
+  registrarToque3D();
+  enquadrar();
 }
 
-function adicionarObjeto3D(chave, mat, cor) {
-  if (!modo3DAtivo) ativarModo3D();
-  const o = construirModelosComplexos(chave, cor, mat);
-  inserirEEnquadrar(o);
+function adicionarObjeto3D(chave, mat, cor, palavra) {
+  if (!grupoProjeto3D) return;
+  if (!document.getElementById("chkMesclar").checked) limparCena3D();
+  const o = construir(chave, cor, mat, palavra); if (o) inserir(o, 1);
 }
-
-function adicionarForma3DManual() {
-  adicionarObjeto3D(document.getElementById("selectForma").value, document.getElementById("selectMaterial").value, document.getElementById("corObjeto").value);
-}
+function adicionarForma3DManual() { adicionarObjeto3D(selectForma.value, selectMaterial.value, corObjeto.value); }
 
 function salvarProjeto3D() {
-  if (!grupoProjeto3D || !grupoProjeto3D.children.length) { alert("Sem objetos para salvar!"); return; }
-  const nome = prompt("Nome do projeto 3D:", "Projeto Jade " + (memoria.projetos3D.length + 1));
-  if (nome) {
-    memoria.projetos3D.push({ nome, data: new Date().toLocaleDateString('pt-BR') });
-    salvarMemoria();
-    jadeDiz(`Projeto <b>"${esc(nome)}"</b> salvo na memória!`);
+  if (!grupoProjeto3D || !grupoProjeto3D.children.length) { alert("Não há objetos no projeto 3D para salvar, Mestre!"); return; }
+  const nome = prompt("Digite o nome do projeto 3D:", "Projeto Jade " + (memoria.projetos3D.length + 1));
+  if (!nome) return;
+  memoria.projetos3D.push({
+    nome, data: new Date().toLocaleDateString('pt-BR'),
+    objetos: grupoProjeto3D.children.map(o => ({ chave: o.userData.chave, cor: o.userData.cor, material: o.userData.material, palavra: o.userData.palavra, escala: o.userData.escala, posicao: { x: o.position.x, y: o.position.y, z: o.position.z } }))
+  });
+  salvarMemoria();
+  jadeDiz(`Projeto 3D <b>"${esc(nome)}"</b> salvo, Mestre!`, `Projeto ${nome} salvo na minha memória!`);
+}
+
+const CORES = { vermelh: "#e02424", azul: "#2563eb", verde: "#16a34a", amarel: "#facc15", laranj: "#f97316", roxo: "#8b3dff", lilas: "#b39ddb", rosa: "#ec4899", branc: "#f5f5f5", pret: "#222222", dourad: "#d4af37", prat: "#c0c0c0", ciano: "#06b6d4", cinza: "#888888", marrom: "#8b5a2b" };
+
+function processarModo3DTexto(txt) {
+  if (!modo3DAtivo) ativarModo3D();
+  const t = normalizar(txt);
+  let cor = null, chave = 'cube', palavra = 'objeto';
+
+  for (const [k, hex] of Object.entries(CORES)) {
+    if (t.includes(k)) { cor = hex; break; }
   }
+
+  for (const [k, v] of Object.entries(R)) {
+    if (v.rx && v.rx.test(t)) { chave = k; palavra = v.n; break; }
+  }
+
+  if (t.includes("camaro")) { chave = "camaro"; cor = cor || "#facc15"; palavra = "Camaro Amarelo"; }
+
+  const imgPrompt = encodeURIComponent(`${palavra} ${cor ? 'colored' : ''} 3d render high quality`);
+  const imgUrl = `https://image.pollinations.ai/prompt/${imgPrompt}?width=400&height=250&nologo=true`;
+
+  adicionarObjeto3D(chave, selectMaterial.value, cor, palavra);
+  jadeDiz(`Criei o modelo 3D de <b>${esc(palavra)}</b> para você, Mestre! Se não interagir por 10 segundos, ele gira levemente.`, `Modelo 3D de ${palavra} criado!`, imgUrl);
 }
 
-/* ================= RECONHECIMENTO E PROCESSAMENTO ================= */
-function interpretarSolicitacao3D(texto) {
-  const t = normalizar(texto);
-  
-  // Detecção de cores
-  let cor = "#facc15"; // Amarelo padrão
-  if (t.includes("vermelh")) cor = "#e02424";
-  else if (t.includes("azul")) cor = "#2563eb";
-  else if (t.includes("verd")) cor = "#16a34a";
-  else if (t.includes("pret")) cor = "#222222";
-  else if (t.includes("branc")) cor = "#ffffff";
-  else if (t.includes("roxo")) cor = "#8b3dff";
-  else if (t.includes("rosa")) cor = "#ec4899";
-
-  // Detecção do Modelo
-  let modelo = "cube";
-  let nomeExibicao = "Modelo 3D";
-
-  if (t.includes("camaro")) { modelo = "camaro"; nomeExibicao = "Camaro Esportivo"; }
-  else if (t.includes("carro") || t.includes("automovel")) { modelo = "carro"; nomeExibicao = "Carro"; }
-  else if (t.includes("robo") || t.includes("android")) { modelo = "robo"; nomeExibicao = "Robô"; }
-  else if (t.includes("casa")) { modelo = "casa"; nomeExibicao = "Casa"; }
-  else if (t.includes("foguete")) { modelo = "foguete"; nomeExibicao = "Foguete"; }
-  else if (t.includes("esfera") || t.includes("bola")) { modelo = "sphere"; nomeExibicao = "Esfera"; }
-
-  // Geração de imagem base via IA (Pollinations API)
-  const promptImg = encodeURIComponent(`${nomeExibicao} ${t.includes("amarelo") ? "yellow" : ""} 3D render concept art high quality`);
-  const imgUrl = `https://image.pollinations.ai/prompt/${promptImg}?width=500&height=300&nologo=true`;
-
-  adicionarObjeto3D(modelo, 'phong', cor);
-
-  jadeDiz(`Criei o modelo 3D do <b>${nomeExibicao}</b> conforme solicitado, Mestre! Se não interagir por 10 segundos, ele começará a girar levemente.`, 
-          `Criei o modelo 3D do ${nomeExibicao} para você!`, imgUrl);
-}
-
+/* ================= CONVERSA & COMANDOS DA JADE ================= */
 function processarComando(txt) {
   const norm = normalizar(txt);
   if (!norm) return;
@@ -405,15 +470,17 @@ function processarComando(txt) {
   escrever(txt, "user");
   inputEl.value = "";
 
-  if (norm.includes("3d") || norm.includes("crie") || norm.includes("desenhe") || norm.includes("modelo")) {
-    interpretarSolicitacao3D(txt);
-  } else if (norm.includes("que horas")) {
-    jadeDiz(`Mestre, agora são <b>${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</b>.`);
-  } else if (norm.includes("limpar 3d")) {
-    limparCena3D();
-    jadeDiz("Cena 3D limpa com sucesso!");
+  if (norm.includes("3d") || norm.includes("crie") || norm.includes("camaro") || norm.includes("desenhe")) {
+    processarModo3DTexto(txt);
+  } else if (norm.includes("horas")) {
+    jadeDiz(`Agora são <b>${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b>, Mestre.`);
+  } else if (norm.includes("tarefas")) {
+    const list = memoria.tarefas.length ? memoria.tarefas.map(t => `• ${esc(t)}`).join('<br>') : 'Nenhuma tarefa cadastrada!';
+    jadeDiz(`Sua lista de tarefas:<br>${list}`);
+  } else if (norm.includes("piada")) {
+    jadeDiz(rnd(["Por que o robô foi ao médico? Porque estava com vírus!", "O que o JS disse pro CSS? Você me dá estilo!"]));
   } else {
-    jadeDiz(`Compreendido, Mestre! Processando sua solicitação sobre: "<i>${esc(txt)}</i>".`);
+    jadeDiz(`Entendido, Mestre! Processando sua mensagem: "<i>${esc(txt)}</i>".`);
   }
 }
 
@@ -421,24 +488,19 @@ function enviar() { processarComando(inputEl.value); }
 
 /* ================= ÁUDIO / MIC ================= */
 function iniciarGravacao() {
-  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-    alert("Reconhecimento de voz não suportado neste navegador."); return;
-  }
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  rec = new SpeechRec(); rec.lang = "pt-BR"; rec.continuous = false;
+  rec = new SpeechRec(); rec.lang = "pt-BR";
   rec.onstart = () => { gravacaoAtiva = true; btnMic.classList.add("recording"); };
-  rec.onresult = e => { processarComando(e.results[0][0].transcript); };
-  rec.onerror = () => pararGravacao();
+  rec.onresult = e => processarComando(e.results[0][0].transcript);
   rec.onend = () => pararGravacao();
   rec.start();
 }
-
 function pararGravacao() {
   gravacaoAtiva = false; btnMic.classList.remove("recording");
-  if (rec) { try { rec.stop(); } catch(e){} rec = null; }
+  if (rec) { try { rec.stop(); } catch (e) {} rec = null; }
 }
 
-/* Inicialização */
 renderChips();
 </script>
 </body>
