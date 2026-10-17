@@ -117,23 +117,40 @@ const fmt = s => esc(s).replace(/```(?:\w+)?\n?([\s\S]*?)```/g, (_, c) => "<pre>
 /* VOZ / CHAT */
 function escolherVoz() {
   if (!('speechSynthesis' in window)) return;
-  vozEscolhida = speechSynthesis.getVoices().find(x => x.lang.includes("pt") && /Luciana|Yelda|Google português|Maria|Helena|Francisca/.test(x.name)) || null;
+  const vs = speechSynthesis.getVoices();
+  vozEscolhida = vs.find(x => /^pt/i.test(x.lang) && /Luciana|Yelda|Google português|Maria|Helena|Francisca/.test(x.name)) || vs.find(x => /^pt[-_]BR/i.test(x.lang)) || vs.find(x => /^pt/i.test(x.lang)) || null;
 }
 if ('speechSynthesis' in window) { escolherVoz(); speechSynthesis.onvoiceschanged = escolherVoz; }
 function alternarVoz() {
   vozLigada = !vozLigada;
   if (!vozLigada && 'speechSynthesis' in window) speechSynthesis.cancel();
   $("btnVoz").textContent = "Voz: " + (vozLigada ? "ligada" : "desligada");
+  if (vozLigada) falar("Voz ativada, Mestre.");
 }
+let filaVoz = [], tokenVoz = 0, vozDesbloqueada = false, avisouVoz = false;
+function desbloquearVoz() {
+  if (vozDesbloqueada || !('speechSynthesis' in window)) return;
+  vozDesbloqueada = true;
+  const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u);
+}
+["pointerdown", "keydown", "click", "touchstart"].forEach(ev => window.addEventListener(ev, desbloquearVoz, { passive: true }));
 function falar(texto) {
   if (!vozLigada || !('speechSynthesis' in window)) return;
   const t = texto.replace(/<pre>[\s\S]*?<\/pre>/g, ' codigo no chat. ').replace(/<br\s*\/?>/g, '. ').replace(/<[^>]*>?/gm, ' ').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim();
   if (!t) return;
-  speechSynthesis.cancel();
-  const blocos = []; let cur = "";
+  escolherVoz();
+  const id = ++tokenVoz, blocos = []; let cur = "";
   for (const p of (t.match(/[^.!?;:]+[.!?;:]*\s*/g) || [t])) { if (cur && (cur + p).length > 180) { blocos.push(cur); cur = p; } else cur += p; }
   if (cur) blocos.push(cur);
-  blocos.forEach(b => { const v = new SpeechSynthesisUtterance(b.trim()); v.lang = "pt-BR"; v.pitch = 1.1; if (vozEscolhida) v.voice = vozEscolhida; speechSynthesis.speak(v); });
+  const lista = blocos.map(b => {
+    const v = new SpeechSynthesisUtterance(b.trim()); v.lang = "pt-BR"; v.pitch = 1.1;
+    if (vozEscolhida) v.voice = vozEscolhida;
+    v.onerror = e => { if (e.error === "not-allowed" && !avisouVoz) { avisouVoz = true; escrever("O navegador bloqueou minha voz. Toque na tela e fale comigo de novo.", "jade"); } };
+    return v;
+  });
+  filaVoz = lista;
+  speechSynthesis.cancel();
+  setTimeout(() => { if (id !== tokenVoz) return; speechSynthesis.resume(); lista.forEach(v => speechSynthesis.speak(v)); }, 120);
 }
 function escrever(texto, remetente, cru) {
   const div = document.createElement("div");
@@ -533,13 +550,20 @@ const hashS = (str, seed = 0) => { let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^
 const SENHA_PADRAO = 1773488929953629;
 const senhaAtual = () => { try { return +localStorage.getItem("jade_pw") || SENHA_PADRAO; } catch (e) { return SENHA_PADRAO; } };
 let tentativas = 0, bloqueadoAte = 0, jaSaudou = false;
+function saudacao() {
+  const h = new Date().getHours(), per = h < 5 ? "Boa madrugada" : h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite", n = chamar();
+  const pend = memoria.tarefas.filter(t => !t.concluida).length;
+  const extra = pend ? ` Você tem ${pend} tarefa${pend > 1 ? "s" : ""} pendente${pend > 1 ? "s" : ""}.` : " Nenhuma tarefa pendente, para variar.";
+  if (!jaSaudou) return `${per}, ${n}. Senha correta. Jade IA 3.5 online e inteiramente ao seu dispor.${extra}`;
+  return rnd([`${per}, ${n}. Senha correta, como esperado.${extra}`, `Bem-vindo de volta, ${n}. Eu não estava esperando, é claro.${extra}`, `${per}, ${n}. Acesso liberado. Sempre às suas ordens.${extra}`]);
+}
 function tentarSenha() {
   const msg = $("lockMsg");
   if (Date.now() < bloqueadoAte) { msg.textContent = "Aguarde " + Math.ceil((bloqueadoAte - Date.now()) / 1000) + "s."; return; }
   if (hashS($("senha").value) === senhaAtual()) {
     tentativas = 0; $("senha").value = ""; msg.textContent = "";
     $("lock").classList.add("oculto"); $("app").classList.remove("oculto"); inputEl.focus();
-    jadeDiz(jaSaudou ? `Bem-vindo de volta, ${chamar()}.` : `Jade IA 3.4 online. Aguardando suas ordens, ${chamar()}.`); jaSaudou = true;
+    jadeDiz(saudacao()); jaSaudou = true;
   } else {
     tentativas++; $("senha").value = "";
     if (tentativas >= 3) { bloqueadoAte = Date.now() + 15000; tentativas = 0; msg.textContent = "Senha incorreta. Bloqueada por 15s."; }
@@ -563,6 +587,7 @@ renderChips();
 </script>
 </body>
 </html>
+
 
 
 
