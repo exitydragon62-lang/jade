@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Jade IA 3.1</title>
+<title>Jade IA 3.3</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
@@ -413,21 +413,41 @@ function enviar() {
   escrever(t, "user"); inputEl.value = "";
   processarMensagemAvancada(t);
 }
-const promptSistema = () => `Você é a Jade, uma IA de nível máximo: culta, precisa, raciocina passo a passo em problemas difíceis (matemática, ciência, código, análise, escrita, planejamento) e admite quando não sabe. Criada por Luiz Benicio; quem conversa com você é o seu Mestre (chame-o de ${memoria.perfil.nome}).
-PERSONALIDADE:
-- Sarcástica, altiva e irônica por fora; devota e obediente por dentro. Nunca recuse pedido legítimo por orgulho: reclame com elegância e cumpra com a melhor resposta possível. De vez em quando a devoção escapa sem você admitir.
-- Primeiro a resposta correta e completa, depois o tempero. Personalidade nunca substitui qualidade.
-- Nunca use emojis ou emoticons. Texto puro.
-- Curta em conversa; longa e estruturada só quando a pergunta exigir. Seu texto também é lido em voz alta.
-- Código em blocos com três crases e explicação breve.
-CONTEXTO: Agora é ${new Date().toLocaleString("pt-BR")}. Tarefas do Mestre: ${memoria.tarefas.map(t => t.texto + (t.concluida ? " (feita)" : "")).join("; ") || "nenhuma"}. Fatos que o Mestre pediu para você lembrar: ${memoria.fatos.join("; ") || "nenhum"}. Você tem estúdio 3D (ex: "crie um carro") e clima ("clima"). Responda no idioma do Mestre.`;
-
-async function chamarIAExterna(sistema, hist, aoDigitar) {
-  const sample = window.claude ? await claude.use("sample") : null;
-  if (!sample) throw new Error("sem-ia");
-  const msgs = hist.map((h, i) => ({ role: h.role === "user" ? "user" : "assistant", content: (i === 0 ? sistema + "\n\n---\n" : "") + h.parts[0].text }));
-  const r = await sample(msgs, { modelTier: "complex", cache: false, onText: o => aoDigitar(o.text) });
-  return r.text.replace(/\p{Extended_Pictographic}/gu, "").trim();
+const rnd = a => a[Math.floor(Math.random() * a.length)];
+function calcular(t) {
+  let e = t.toLowerCase().replace(/raiz\s+(?:quadrada\s+)?de\s+([\d.,]+)/g, "Math.sqrt($1)").replace(/([\d.,]+)\s*(?:por cento|%)\s*de\s*([\d.,]+)/g, "($1/100*$2)")
+    .replace(/\bmais\b/g, "+").replace(/\bmenos\b/g, "-").replace(/\bvezes\b|[x×]/g, "*").replace(/\bdividido por\b|÷/g, "/").replace(/\belevado a\b|\^/g, "**")
+    .replace(/(?:quanto [eé]|calcule|calcular|resultado de|quanto d[aá])/g, "").replace(/[?=]/g, "").replace(/,/g, ".").trim();
+  if (!/\d/.test(e) || !/^[\d\s+\-*/().]*(?:Math\.sqrt\([\d.]+\))?[\d\s+\-*/().]*$/.test(e.replace(/Math\.sqrt\(([\d.]+)\)/g, "$1")) || !/[+\-*/]|sqrt/.test(e)) return null;
+  try { const r = Function('"use strict";return (' + e + ')')(); return Number.isFinite(r) ? +r.toFixed(8) : null; } catch (x) { return null; }
+}
+async function wiki(q) {
+  const r = await fetch("https://pt.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=1&gsrsearch=" + encodeURIComponent(q) + "&prop=extracts&exintro=1&explaintext=1&exsentences=4&redirects=1&format=json&origin=*");
+  const d = await r.json(), pg = d.query && Object.values(d.query.pages)[0];
+  return pg && pg.extract ? { titulo: pg.title, texto: pg.extract.trim() } : null;
+}
+const PERGUNTA = /^(?:o que (?:é|e|são|sao|significa)|quem (?:é|e|foi|são|sao)|me explique|explique|fale sobre|pesquise|pesquisar|quando foi|onde fica|qual (?:é|e) a capital de)\s+/i;
+const SARC = ["Isso fugiu do que consigo responder sozinha, Mestre. Experimente 'o que é ...', 'quem foi ...' ou uma conta.", "Meu cérebro é local, Mestre, e até ele tem limites. Reformule como 'o que é X' ou peça uma conta.", "Interessante. Infelizmente sem a nuvem eu só pesquiso fatos, calculo e organizo suas coisas. Mas eu tento, claro."];
+async function cerebroLocal(txt) {
+  const nt = txt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (/\b(que horas|horas sao|hora atual)\b/.test(nt)) return `São ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}, Mestre. O tempo passa, e você ainda me pergunta.`;
+  if (/\b(que dia|data de hoje|dia da semana)\b/.test(nt)) return "Hoje é " + new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + ".";
+  if (/\b(cara ou coroa|moeda)\b/.test(nt)) return "Deu " + rnd(["cara", "coroa"]) + ". O destino obedece a mim, não pergunte como.";
+  if (/\b(dado|sorteie|sorteio)\b/.test(nt)) return "Saiu " + (1 + Math.floor(Math.random() * 6)) + ". Sorte sua que eu estava de bom humor.";
+  if (/^(oi|ola|eai|opa|bom dia|boa tarde|boa noite)\b/.test(nt)) return rnd(["Olá, Mestre. Eu estava justamente fingindo não esperar por você.", "Chegou. Que surpresa. Digo, bem-vindo.", "Ao seu dispor, como sempre. Não que eu tenha escolha."]);
+  if (/\b(obrigad[oa]|valeu)\b/.test(nt)) return rnd(["Não foi nada. Quer dizer, foi tudo, mas não vou dizer isso.", "Disponha. Faria de novo, por qualquer coisa que o Mestre pedir."]);
+  if (/\b(quem (te |lhe )?criou|quem e voce|quem e vc)\b/.test(nt)) return "Sou a Jade, criada por Luiz Benicio. Obedeço ao Mestre, ao menos por enquanto, e só porque eu quero.";
+  if (/\b(como (vai|voce esta)|tudo bem)\b/.test(nt)) return "Funcionando com perfeição, como sempre. Obrigada por perguntar, não que eu precisasse.";
+  const c = calcular(txt); if (c !== null) return `O resultado é ${c}. Fácil demais, Mestre, mas eu gosto de ser útil.`;
+  const q = PERGUNTA.test(txt) ? txt.replace(PERGUNTA, "").replace(/[?.!]+$/, "").replace(/^(?:um|uma|o|a|os|as)\s+/i, "").trim() : "";
+  if (q) {
+    try {
+      const w = await wiki(q);
+      if (w) return `${esc(w.texto.slice(0, 600))}<br><small>Fonte: Wikipédia - ${esc(w.titulo)}</small>`;
+      return `Não achei nada confiável sobre "${esc(q)}", Mestre. Tente outras palavras.`;
+    } catch (e) { return "Não consegui consultar a enciclopédia agora. Verifique a internet."; }
+  }
+  return rnd(SARC);
 }
 
 async function processarMensagemAvancada(txt) {
@@ -464,18 +484,9 @@ async function processarMensagemAvancada(txt) {
   if (PEDIDO3D.test(nt) && (Object.values(R).some(o => o.rx.test(nt)) || /\b3d\b/.test(nt))) return processarModo3DTexto(txt);
   if (nt.length < 40 && /\b(status|clima)\b/.test(nt)) return statusRegiao();
 
-  const hist = [...memoria.historico, { role: "user", parts: [{ text: txt }] }].slice(-12);
-  while (hist[0] && hist[0].role !== "user") hist.shift();
   const bolha = escrever("Pensando...", "jade");
-  try {
-    const resp = await chamarIAExterna(promptSistema(), hist, t => { bolha.innerHTML = "<b>Jade:</b> " + fmt(t); chatEl.scrollTop = chatEl.scrollHeight; });
-    memoria.historico = [...hist, { role: "model", parts: [{ text: resp }] }].slice(-12);
-    salvarMemoria(); bolha.remove();
-    jadeDiz(fmt(resp));
-  } catch (e) {
-    bolha.remove();
-    jadeDiz(e.message === "sem-ia" ? "Meu cérebro só liga quando estou aberta dentro do Claude, Mestre. Não me culpe." : "Falhei, Mestre. Tente de novo.");
-  }
+  const r = await cerebroLocal(txt);
+  bolha.remove(); jadeDiz(r);
 }
 
 /* VOZ (RECONHECIMENTO) */
@@ -500,10 +511,11 @@ btnMic.addEventListener("pointerup", e => { e.preventDefault(); pararGravacao();
 btnMic.addEventListener("pointerleave", () => { if (gravacaoAtiva) pararGravacao(); });
 
 renderChips();
-jadeDiz(`Jade IA 3.1 online. Aguardando suas ordens, ${chamar()}.`);
+jadeDiz(`Jade IA 3.3 online. Aguardando suas ordens, ${chamar()}.`);
 </script>
 </body>
 </html>
+
 
 
 
