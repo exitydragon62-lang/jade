@@ -41,10 +41,21 @@ button:active{transform:scale(.95)}
 .btn-clear:hover{color:#ff4d4d;background:transparent}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 @media (prefers-reduced-motion:reduce){.btn-mic.recording{animation:none}}
+.oculto{display:none!important}
+#lock{position:fixed;inset:0;z-index:99;background:#0d0814;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
+#lock input{width:100%;max-width:280px;text-align:center}
+#lockMsg{color:#ff6b8a;font-size:12px;min-height:16px}
 </style>
 </head>
 <body>
-<div class="app">
+<div id="lock">
+  <h1>Jade IA</h1>
+  <div class="subtitle">Acesso restrito</div>
+  <input id="senha" type="password" placeholder="Senha" autocomplete="off" aria-label="Senha">
+  <button type="button" onclick="tentarSenha()">Entrar</button>
+  <div id="lockMsg" aria-live="polite"></div>
+</div>
+<div class="app oculto" id="app">
   <div class="header"><h1>Jade IA</h1><div class="subtitle">Criada por Luiz Benicio</div></div>
   <div id="container-3d">
     <div style="display:flex;justify-content:space-between;align-items:center">
@@ -81,6 +92,7 @@ button:active{transform:scale(.95)}
     <span class="shortcut-hint"><b>C</b> falar | <b>V</b> clima | <b>M</b> site | <b>T</b> 3D | <b>N</b> voltar</span>
     <span>
       <button type="button" class="btn-clear" id="btnVoz" onclick="alternarVoz()">Voz: ligada</button> &nbsp;
+      <button type="button" class="btn-clear" onclick="trancar()">Trancar</button> &nbsp;
       <button type="button" class="btn-clear" onclick="limparMemoria()">Resetar dados</button>
     </span>
   </div>
@@ -115,13 +127,13 @@ function alternarVoz() {
 }
 function falar(texto) {
   if (!vozLigada || !('speechSynthesis' in window)) return;
-  let t = texto.replace(/<pre>[\s\S]*?<\/pre>/g, ' codigo no chat. ').replace(/<[^>]*>?/gm, ' ').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim();
-  if (t.length > 220) t = t.substring(0, 220).replace(/\s\S*$/, "") + "... o restante está no chat.";
+  const t = texto.replace(/<pre>[\s\S]*?<\/pre>/g, ' codigo no chat. ').replace(/<br\s*\/?>/g, '. ').replace(/<[^>]*>?/gm, ' ').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!t) return;
   speechSynthesis.cancel();
-  const v = new SpeechSynthesisUtterance(t);
-  v.lang = "pt-BR"; v.pitch = 1.1;
-  if (vozEscolhida) v.voice = vozEscolhida;
-  speechSynthesis.speak(v);
+  const blocos = []; let cur = "";
+  for (const p of (t.match(/[^.!?;:]+[.!?;:]*\s*/g) || [t])) { if (cur && (cur + p).length > 180) { blocos.push(cur); cur = p; } else cur += p; }
+  if (cur) blocos.push(cur);
+  blocos.forEach(b => { const v = new SpeechSynthesisUtterance(b.trim()); v.lang = "pt-BR"; v.pitch = 1.1; if (vozEscolhida) v.voice = vozEscolhida; speechSynthesis.speak(v); });
 }
 function escrever(texto, remetente, cru) {
   const div = document.createElement("div");
@@ -131,7 +143,7 @@ function escrever(texto, remetente, cru) {
   chatEl.scrollTop = chatEl.scrollHeight;
   return div;
 }
-function jadeDiz(html, voz) { escrever(html, "jade"); falar(voz || html); }
+function jadeDiz(html) { escrever(html, "jade"); falar(html); }
 function renderChips() {
   const box = $("chips"); box.innerHTML = "";
   ["Que horas sao?", "Nova tarefa: ", "Me explique algo", "Modo 3D", "Minhas tarefas", "O que voce lembra?"].forEach(s => {
@@ -145,7 +157,7 @@ function renderChips() {
 /* ATALHOS */
 inputEl.addEventListener("keydown", e => { if (e.key === "Enter") enviar(); });
 window.addEventListener("keydown", e => {
-  if (document.activeElement === inputEl || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  if (!$("lock").classList.contains("oculto") || document.activeElement === inputEl || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
   const k = e.key.toLowerCase();
   if (k === "c" && !gravacaoAtiva) iniciarGravacao();
   else if (k === "v") statusRegiao();
@@ -464,6 +476,13 @@ async function processarMensagemAvancada(txt) {
   if (/\b(o que (você|voce) lembra|meus fatos)\b/.test(nt))
     return jadeDiz(memoria.fatos.length ? "<b>Eu lembro:</b><br>" + memoria.fatos.map((f, i) => `${i + 1}. ${esc(f)}`).join("<br>") + "<br>Diga 'esquecer tudo' para apagar." : "Nada ainda. Diga 'lembre que ...'.");
   if (/^esquecer tudo/.test(nt)) { memoria.fatos = []; memoria.historico = []; salvarMemoria(); return jadeDiz("Memória apagada. Triste, mas obedeço."); }
+  if (/^(trancar|bloquear)\b/.test(nt)) return trancar();
+  if (/\b(mudar|trocar|alterar)\s+(a\s+)?senha\b/.test(nt)) return mudarSenha();
+  if ((m = nt.match(/(?:timer|cronometro|cronômetro|me avise|me lembre).*?(\d+)\s*(segundo|seg|minuto|min|hora|h)\b/))) {
+    const n = +m[1], u = m[2][0] === "h" ? 3600 : m[2][0] === "m" ? 60 : 1, rotuloT = n + " " + (u === 3600 ? "hora(s)" : u === 60 ? "minuto(s)" : "segundo(s)");
+    setTimeout(() => jadeDiz(`Mestre, seus ${rotuloT} acabaram. Não que eu estivesse contando.`), n * u * 1000);
+    return jadeDiz(`Timer de ${rotuloT} iniciado. Eu aviso em voz alta, mantenha esta página aberta.`);
+  }
   if ((m = nt.match(/\b(?:abrir|carregar)\s+projeto\s+(\d+)\b/))) return abrirProjeto(parseInt(m[1]) - 1);
   if (/\b(meus\s+projetos|listar\s+projetos|projetos\s+3d)\b/.test(nt)) return listarProjetos();
   if (/^(nova|adicionar)\s+tarefa:/i.test(txt)) {
@@ -510,11 +529,41 @@ btnMic.addEventListener("pointerdown", e => { e.preventDefault(); iniciarGravaca
 btnMic.addEventListener("pointerup", e => { e.preventDefault(); pararGravacao(); });
 btnMic.addEventListener("pointerleave", () => { if (gravacaoAtiva) pararGravacao(); });
 
+const hashS = (str, seed = 0) => { let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed; for (let i = 0, ch; i < str.length; i++) { ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return 4294967296 * (2097151 & h2) + (h1 >>> 0); };
+const SENHA_PADRAO = 1773488929953629;
+const senhaAtual = () => { try { return +localStorage.getItem("jade_pw") || SENHA_PADRAO; } catch (e) { return SENHA_PADRAO; } };
+let tentativas = 0, bloqueadoAte = 0, jaSaudou = false;
+function tentarSenha() {
+  const msg = $("lockMsg");
+  if (Date.now() < bloqueadoAte) { msg.textContent = "Aguarde " + Math.ceil((bloqueadoAte - Date.now()) / 1000) + "s."; return; }
+  if (hashS($("senha").value) === senhaAtual()) {
+    tentativas = 0; $("senha").value = ""; msg.textContent = "";
+    $("lock").classList.add("oculto"); $("app").classList.remove("oculto"); inputEl.focus();
+    jadeDiz(jaSaudou ? `Bem-vindo de volta, ${chamar()}.` : `Jade IA 3.4 online. Aguardando suas ordens, ${chamar()}.`); jaSaudou = true;
+  } else {
+    tentativas++; $("senha").value = "";
+    if (tentativas >= 3) { bloqueadoAte = Date.now() + 15000; tentativas = 0; msg.textContent = "Senha incorreta. Bloqueada por 15s."; }
+    else msg.textContent = "Senha incorreta.";
+  }
+}
+function trancar() {
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  fecharModo3D(); $("app").classList.add("oculto"); $("lock").classList.remove("oculto"); $("senha").focus();
+}
+function mudarSenha() {
+  const at = prompt("Senha atual:"); if (at === null) return;
+  if (hashS(at) !== senhaAtual()) return jadeDiz("Senha atual incorreta. Tentativa patética de me enganar.");
+  const nv = prompt("Nova senha (mínimo 6 caracteres):"); if (!nv) return;
+  if (nv.length < 6) return jadeDiz("Curta demais, Mestre. Escolha algo digno de mim.");
+  try { localStorage.setItem("jade_pw", String(hashS(nv))); } catch (e) {}
+  jadeDiz("Senha alterada.");
+}
+$("senha").addEventListener("keydown", e => { if (e.key === "Enter") tentarSenha(); });
 renderChips();
-jadeDiz(`Jade IA 3.3 online. Aguardando suas ordens, ${chamar()}.`);
 </script>
 </body>
 </html>
+
 
 
 
