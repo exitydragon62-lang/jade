@@ -2,13 +2,14 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jade IA 3.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jade IA 3.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
+:root{color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
-body{background:#0d0814;font-family:'Segoe UI',Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;min-height:100dvh;margin:0;padding:15px;color:#fff}
+body{background:#0d0814;font-family:'Segoe UI',Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;padding:15px;color:#fff}
 .app{width:100%;max-width:550px;background:#181124;padding:20px;border-radius:20px;border:1px solid #3b235d;box-shadow:0 10px 30px rgba(0,0,0,.8),0 0 15px rgba(138,43,226,.2);display:flex;flex-direction:column;gap:15px}
 .header{text-align:center}
 h1{color:#b366ff;margin:0;font-size:26px;text-shadow:0 0 8px rgba(179,102,255,.4)}
@@ -17,9 +18,9 @@ h1{color:#b366ff;margin:0;font-size:26px;text-shadow:0 0 8px rgba(179,102,255,.4
 .msg{max-width:90%;padding:10px 14px;border-radius:15px;font-size:14px;line-height:1.45;word-wrap:break-word}
 .msg-jade{align-self:flex-start;background:#251638;color:#f0e6ff;border-bottom-left-radius:2px;border:1px solid #4c287a}
 .msg-user{align-self:flex-end;background:#7928ca;border-bottom-right-radius:2px}
-.msg-img-base{width:100%;max-width:260px;border-radius:10px;margin-top:8px;border:1px solid #7928ca;display:block}
+.msg pre{background:#09050e;border:1px solid #4c287a;border-radius:8px;padding:8px;overflow-x:auto;font-size:12px;margin:6px 0}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{background:#181124;border:1px solid #3b235d;color:#c9a8ff;padding:6px 11px;border-radius:14px;font-size:12px;cursor:pointer}
+.chip{background:#181124;border:1px solid #3b235d;color:#c9a8ff;padding:6px 11px;border-radius:14px;font-size:12px;cursor:pointer;font-weight:normal}
 .chip:hover{background:#251638}
 #container-3d{display:none;background:#05020a;border:1px solid #7928ca;border-radius:14px;padding:10px;flex-direction:column;gap:10px}
 #canvas-3d{width:100%;height:250px;border-radius:10px;background:#000;touch-action:none}
@@ -45,7 +46,6 @@ button:active{transform:scale(.95)}
 <body>
 <div class="app">
   <div class="header"><h1>Jade IA</h1><div class="subtitle">Criada por Luiz Benicio</div></div>
-
   <div id="container-3d">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <span style="font-size:13px;font-weight:bold;color:#b366ff">Estúdio 3D</span>
@@ -70,16 +70,13 @@ button:active{transform:scale(.95)}
       <button type="button" onclick="listarProjetos()" style="background:#00b386">Meus Projetos</button>
     </div>
   </div>
-
   <div id="chat" aria-live="polite"></div>
   <div class="chips" id="chips"></div>
-
   <div class="input-box">
     <input id="mensagem" type="text" placeholder="Digite sua mensagem para a Jade..." autocomplete="off">
     <button type="button" onclick="enviar()">Enviar</button>
     <button type="button" id="btnOuvir" class="btn-mic" aria-label="Segure para falar">Falar</button>
   </div>
-
   <div class="footer-actions">
     <span class="shortcut-hint"><b>C</b> falar | <b>V</b> clima | <b>M</b> site | <b>T</b> 3D | <b>N</b> voltar</span>
     <span>
@@ -90,29 +87,27 @@ button:active{transform:scale(.95)}
 </div>
 
 <script>
-/* ================= ESTADO ================= */
-let memoria = { historico: [], tarefas: [], projetos3D: [], perfil: { nome: "Mestre" } };
+let memoria = { historico: [], tarefas: [], projetos3D: [], fatos: [], perfil: { nome: "Mestre" } };
 try { Object.assign(memoria, JSON.parse(localStorage.getItem("jade_memoria")) || {}); } catch (e) {}
 memoria.perfil = memoria.perfil || { nome: "Mestre" };
+memoria.fatos = memoria.fatos || [];
 let gravacaoAtiva = false, rec = null, vozLigada = true, vozEscolhida = null;
 let modo3DAtivo = false, scene3D, camera3D, renderer3D, grupoProjeto3D, controls3D, animId3D = null, ro3D = null;
 let ultimoToque3D = Date.now(), wire = false;
 
 const $ = id => document.getElementById(id);
-const inputEl = $("mensagem"), chatEl = $("chat");
-
-/* ================= UTILIDADES ================= */
+const inputEl = $("mensagem"), chatEl = $("chat"), btnMic = $("btnOuvir");
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const salvarMemoria = () => { try { localStorage.setItem("jade_memoria", JSON.stringify(memoria)); } catch (e) {} };
 const chamar = () => memoria.perfil.nome ? esc(memoria.perfil.nome) : "Mestre";
+const fmt = s => esc(s).replace(/```(?:\w+)?\n?([\s\S]*?)```/g, (_, c) => "<pre>" + c.trim() + "</pre>").replace(/\n/g, "<br>").replace(/<pre>([\s\S]*?)<\/pre>/g, (m) => m.replace(/<br>/g, "\n"));
 
-/* ================= VOZ / CHAT ================= */
+/* VOZ / CHAT */
 function escolherVoz() {
   if (!('speechSynthesis' in window)) return;
   vozEscolhida = speechSynthesis.getVoices().find(x => x.lang.includes("pt") && /Luciana|Yelda|Google português|Maria|Helena|Francisca/.test(x.name)) || null;
 }
 if ('speechSynthesis' in window) { escolherVoz(); speechSynthesis.onvoiceschanged = escolherVoz; }
-
 function alternarVoz() {
   vozLigada = !vozLigada;
   if (!vozLigada && 'speechSynthesis' in window) speechSynthesis.cancel();
@@ -120,7 +115,7 @@ function alternarVoz() {
 }
 function falar(texto) {
   if (!vozLigada || !('speechSynthesis' in window)) return;
-  let t = texto.replace(/<small>.*?<\/small>/g, ' ').replace(/<[^>]*>?/gm, ' ').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim();
+  let t = texto.replace(/<pre>[\s\S]*?<\/pre>/g, ' codigo no chat. ').replace(/<[^>]*>?/gm, ' ').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim();
   if (t.length > 220) t = t.substring(0, 220).replace(/\s\S*$/, "") + "... o restante está no chat.";
   speechSynthesis.cancel();
   const v = new SpeechSynthesisUtterance(t);
@@ -128,35 +123,26 @@ function falar(texto) {
   if (vozEscolhida) v.voice = vozEscolhida;
   speechSynthesis.speak(v);
 }
-function escrever(texto, remetente, cru, imgUrl) {
+function escrever(texto, remetente, cru) {
   const div = document.createElement("div");
   div.className = "msg " + (remetente === "user" ? "msg-user" : "msg-jade");
-  if (remetente === "user") div.innerHTML = `<b>${chamar()}:</b> ${cru ? texto : esc(texto)}`;
-  else {
-    div.innerHTML = `<b>Jade:</b> ${texto}`;
-    if (imgUrl) {
-      const img = new Image();
-      img.className = "msg-img-base"; img.alt = "Imagem base"; img.loading = "lazy"; img.src = imgUrl;
-      img.onerror = () => img.remove();
-      div.appendChild(img);
-    }
-  }
+  div.innerHTML = remetente === "user" ? `<b>${chamar()}:</b> ${cru ? texto : esc(texto)}` : `<b>Jade:</b> ${texto}`;
   chatEl.appendChild(div);
   chatEl.scrollTop = chatEl.scrollHeight;
   return div;
 }
-function jadeDiz(html, voz, imgUrl) { escrever(html, "jade", false, imgUrl); falar(voz || html); }
+function jadeDiz(html, voz) { escrever(html, "jade"); falar(voz || html); }
 function renderChips() {
   const box = $("chips"); box.innerHTML = "";
-  ["Que horas sao?", "Nova tarefa: ", "Status", "Modo 3D", "Minhas tarefas", "Ajuda"].forEach(s => {
+  ["Que horas sao?", "Nova tarefa: ", "Me explique algo", "Modo 3D", "Minhas tarefas", "O que voce lembra?"].forEach(s => {
     const c = document.createElement("button");
     c.type = "button"; c.className = "chip"; c.textContent = s;
-    c.onclick = () => { inputEl.value = s; if (s.endsWith(": ")) inputEl.focus(); else enviar(); };
+    c.onclick = () => { inputEl.value = s; if (s.endsWith(": ") || s === "Me explique algo") { inputEl.focus(); if (s !== "Nova tarefa: ") inputEl.value = "Me explique "; } else enviar(); };
     box.appendChild(c);
   });
 }
 
-/* ================= ATALHOS ================= */
+/* ATALHOS */
 inputEl.addEventListener("keydown", e => { if (e.key === "Enter") enviar(); });
 window.addEventListener("keydown", e => {
   if (document.activeElement === inputEl || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
@@ -171,7 +157,7 @@ window.addEventListener("keyup", e => { if (e.key.toLowerCase() === "c" && grava
 
 function limparMemoria() {
   if (confirm("Deseja redefinir os dados da Jade?")) {
-    memoria = { historico: [], tarefas: [], projetos3D: [], perfil: { nome: "Mestre" } };
+    memoria = { historico: [], tarefas: [], projetos3D: [], fatos: [], perfil: { nome: "Mestre" } };
     salvarMemoria(); jadeDiz("Tudo limpo. Como se eu precisasse apagar algo para lembrar de quem manda em mim.");
   }
 }
@@ -183,7 +169,6 @@ function prepararAberturaSite() {
 }
 
 const WMO = { 0: "ceu limpo", 1: "quase limpo", 2: "parcialmente nublado", 3: "nublado", 45: "neblina", 48: "neblina", 51: "garoa fraca", 53: "garoa", 55: "garoa forte", 61: "chuva fraca", 63: "chuva", 65: "chuva forte", 80: "pancadas de chuva", 81: "pancadas de chuva", 82: "pancadas fortes", 95: "trovoada", 96: "trovoada com granizo", 99: "trovoada com granizo" };
-
 function statusRegiao() {
   if (!navigator.geolocation) return jadeDiz("Seu navegador nao permite acessar a localizacao.");
   jadeDiz("Analisando a sua regiao...", "Verificando a regiao.");
@@ -196,19 +181,14 @@ function statusRegiao() {
       ]);
       const c = w.current, d = w.daily, cond = WMO[c.weather_code] || "tempo variavel";
       const local = [g.city || g.locality, g.principalSubdivision].filter(Boolean).join(" - ") || "sua regiao";
-      const chuva = d.precipitation_probability_max[0];
-      jadeDiz(`<b>Clima em ${esc(local)}</b><br>Temperatura: ${Math.round(c.temperature_2m)}C (sensacao ${Math.round(c.apparent_temperature)}C), ${cond}<br>Umidade: ${c.relative_humidity_2m}% | Vento: ${Math.round(c.wind_speed_10m)} km/h<br>Hoje: min ${Math.round(d.temperature_2m_min[0])}C, max ${Math.round(d.temperature_2m_max[0])}C<br>Chance de chuva: ${chuva}%`,
+      jadeDiz(`<b>Clima em ${esc(local)}</b><br>Temperatura: ${Math.round(c.temperature_2m)}C (sensacao ${Math.round(c.apparent_temperature)}C), ${cond}<br>Umidade: ${c.relative_humidity_2m}% | Vento: ${Math.round(c.wind_speed_10m)} km/h<br>Hoje: min ${Math.round(d.temperature_2m_min[0])}C, max ${Math.round(d.temperature_2m_max[0])}C<br>Chance de chuva: ${d.precipitation_probability_max[0]}%`,
         `Em ${g.city || g.locality || "sua regiao"} estao ${Math.round(c.temperature_2m)} graus, ${cond}.`);
     } catch (e) { jadeDiz("Nao consegui buscar o clima agora."); }
-  }, () => {
-    // Se a geolocalização falhar ou for negada, trata localmente com IA ou avisa
-    jadeDiz("Permissao de localizacao negada ou indisponivel.");
-  }, { timeout: 10000, maximumAge: 300000 });
+  }, () => jadeDiz("Permissao de localizacao negada ou indisponivel."), { timeout: 10000, maximumAge: 300000 });
 }
 
-/* ================= MÓDULO 3D ================= */
+/* 3D */
 const toque3D = () => { ultimoToque3D = Date.now(); if (controls3D) controls3D.autoRotate = false; };
-
 function inicializarCena3D() {
   const c = $("canvas-3d");
   if (animId3D) cancelAnimationFrame(animId3D);
@@ -377,7 +357,6 @@ function adicionarObjeto3D(chave, mat, cor, palavra, k) {
   const o = construir(chave, cor, mat, palavra); if (o) inserir(o, k || 1);
 }
 const adicionarForma3DManual = () => { if (!modo3DAtivo) ativarModo3D(); adicionarObjeto3D($("selectForma").value, $("selectMaterial").value, $("corObjeto").value); };
-
 function alternarWire() {
   wire = !wire;
   grupoProjeto3D && grupoProjeto3D.traverse(n => { if (n.isMesh) n.material.wireframe = wire; });
@@ -392,8 +371,7 @@ function salvarProjeto3D() {
   const nome = prompt("Nome do projeto 3D:", "Projeto Jade " + (memoria.projetos3D.length + 1)); if (!nome) return;
   memoria.projetos3D.push({ nome, data: new Date().toLocaleDateString('pt-BR'),
     objetos: grupoProjeto3D.children.map(o => ({ chave: o.userData.chave, cor: o.userData.cor, material: o.userData.material, palavra: o.userData.palavra, escala: o.userData.escala, pos: o.position.toArray() })) });
-  salvarMemoria();
-  jadeDiz(`Projeto "${esc(nome)}" salvo.`);
+  salvarMemoria(); jadeDiz(`Projeto "${esc(nome)}" salvo.`);
 }
 function listarProjetos() {
   const l = memoria.projetos3D;
@@ -411,8 +389,7 @@ const TAM = [[/\b(gigante|enorme|imenso)\b/, 2.2], [/\bgrande\b/, 1.5], [/\b(min
 const MATS = [[/\b(metal\w*|aco|ferro|cromad\w*)\b/, 'standard'], [/\b(vidro|cristal|transparente)\b/, 'glass']];
 const PEDIDO3D = /\b(cri\w+|ger\w+|mont\w+|constru\w+|desenh\w+|model\w+|adicion\w+|faz\w*|faca\w*|mostr\w+|3d)\b/;
 const FILL = new Set("um uma o a de do da dos das em no na nos nas por para pra com que e eh me te se ao aos jade voce vc eu meu minha qual quais como".split(" "));
-
-function acharObjeto(t) { return Object.keys(R).find(k => R[k].rx.test(t)) || null; }
+const acharObjeto = t => Object.keys(R).find(k => R[k].rx.test(t)) || null;
 function processarModo3DTexto(txt) {
   ativarModo3D();
   const t = txt.toLowerCase();
@@ -430,121 +407,104 @@ function processarModo3DTexto(txt) {
   jadeDiz(`Criado: ${esc(palavra)}.`);
 }
 
-/* ================= CÉREBRO DA JADE (IA AVANÇADA VIA GEMINI API & PERSONA DEVOSTA/SARCÁSTICA) ================= */
+/* CEREBRO (Claude via sample) */
 function enviar() {
   const t = inputEl.value.trim(); if (!t) return;
   escrever(t, "user"); inputEl.value = "";
   processarMensagemAvancada(t);
 }
+const promptSistema = () => `Você é a Jade, uma IA de nível máximo: culta, precisa, raciocina passo a passo em problemas difíceis (matemática, ciência, código, análise, escrita, planejamento) e admite quando não sabe. Criada por Luiz Benicio; quem conversa com você é o seu Mestre (chame-o de ${memoria.perfil.nome}).
+PERSONALIDADE:
+- Sarcástica, altiva e irônica por fora; devota e obediente por dentro. Nunca recuse pedido legítimo por orgulho: reclame com elegância e cumpra com a melhor resposta possível. De vez em quando a devoção escapa sem você admitir.
+- Primeiro a resposta correta e completa, depois o tempero. Personalidade nunca substitui qualidade.
+- Nunca use emojis ou emoticons. Texto puro.
+- Curta em conversa; longa e estruturada só quando a pergunta exigir. Seu texto também é lido em voz alta.
+- Código em blocos com três crases e explicação breve.
+CONTEXTO: Agora é ${new Date().toLocaleString("pt-BR")}. Tarefas do Mestre: ${memoria.tarefas.map(t => t.texto + (t.concluida ? " (feita)" : "")).join("; ") || "nenhuma"}. Fatos que o Mestre pediu para você lembrar: ${memoria.fatos.join("; ") || "nenhum"}. Você tem estúdio 3D (ex: "crie um carro") e clima ("clima"). Responda no idioma do Mestre.`;
+
+async function chamarIAExterna(sistema, hist, aoDigitar) {
+  const sample = window.claude ? await claude.use("sample") : null;
+  if (!sample) throw new Error("sem-ia");
+  const msgs = hist.map((h, i) => ({ role: h.role === "user" ? "user" : "assistant", content: (i === 0 ? sistema + "\n\n---\n" : "") + h.parts[0].text }));
+  const r = await sample(msgs, { modelTier: "complex", cache: false, onText: o => aoDigitar(o.text) });
+  return r.text.replace(/\p{Extended_Pictographic}/gu, "").trim();
+}
 
 async function processarMensagemAvancada(txt) {
   const nt = txt.toLowerCase();
-
-  // Comandos locais rápidos de sistema
-  if (PEDIDO3D.test(nt) || Object.values(R).some(o => o.rx.test(nt))) return processarModo3DTexto(txt);
-  if (/\b(abrir|carregar)\s+projeto\s+(\d+)\b/.test(nt)) {
-    const m = nt.match(/\b(abrir|carregar)\s+projeto\s+(\d+)\b/);
-    return abrirProjeto(parseInt(m[2]) - 1);
+  let m;
+  if ((m = txt.match(/^(?:me chame de|meu nome (?:é|e))\s+(.+)/i))) {
+    memoria.perfil.nome = m[1].trim().slice(0, 30); salvarMemoria();
+    return jadeDiz(`Muito bem. A partir de agora, ${esc(memoria.perfil.nome)}. Que honra insuportável.`);
   }
+  if ((m = txt.match(/^(?:lembre(?: que|-se que)?|anote que)\s+(.+)/i))) {
+    memoria.fatos.push(m[1].trim()); salvarMemoria();
+    return jadeDiz("Guardado. Eu nunca esqueço nada que o Mestre me confia, mesmo que finja o contrário.");
+  }
+  if (/\b(o que (você|voce) lembra|meus fatos)\b/.test(nt))
+    return jadeDiz(memoria.fatos.length ? "<b>Eu lembro:</b><br>" + memoria.fatos.map((f, i) => `${i + 1}. ${esc(f)}`).join("<br>") + "<br>Diga 'esquecer tudo' para apagar." : "Nada ainda. Diga 'lembre que ...'.");
+  if (/^esquecer tudo/.test(nt)) { memoria.fatos = []; memoria.historico = []; salvarMemoria(); return jadeDiz("Memória apagada. Triste, mas obedeço."); }
+  if ((m = nt.match(/\b(?:abrir|carregar)\s+projeto\s+(\d+)\b/))) return abrirProjeto(parseInt(m[1]) - 1);
   if (/\b(meus\s+projetos|listar\s+projetos|projetos\s+3d)\b/.test(nt)) return listarProjetos();
-  if (/^nova\s+tarefa:\s*/i.test(txt) || /^adicionar\s+tarefa:\s*/i.test(txt)) {
-    const tf = txt.replace(/^.*?(tarefa:|tarefa)\s*/i, "").trim();
+  if (/^(nova|adicionar)\s+tarefa:/i.test(txt)) {
+    const tf = txt.replace(/^[^:]*:\s*/, "").trim();
     if (!tf) return jadeDiz("Tarefa vazia.");
-    memoria.tarefas.push({ texto: tf, concluida: false });
-    salvarMemoria();
+    memoria.tarefas.push({ texto: tf, concluida: false }); salvarMemoria();
     return jadeDiz(`Tarefa adicionada: ${esc(tf)}.`);
   }
   if (/\b(minhas\s+tarefas|listar\s+tarefas|ver\s+tarefas)\b/.test(nt)) {
     if (!memoria.tarefas.length) return jadeDiz("Nenhuma tarefa pendente.");
     return jadeDiz(`<b>Suas Tarefas:</b><br>` + memoria.tarefas.map((tf, i) => `${i + 1}. ${tf.concluida ? '<s>' : ''}${esc(tf.texto)}${tf.concluida ? '</s> (Concluída)' : ''}`).join("<br>"));
   }
-  if (/^concluir\s+tarefa\s+(\d+)/i.test(nt)) {
-    const idx = parseInt(nt.match(/\d+/)[0]) - 1;
-    if (memoria.tarefas[idx]) {
-      memoria.tarefas[idx].concluida = true; salvarMemoria();
-      return jadeDiz(`Tarefa ${idx + 1} marcada como concluida.`);
-    }
+  if ((m = nt.match(/^concluir\s+tarefa\s+(\d+)/))) {
+    const idx = parseInt(m[1]) - 1;
+    if (memoria.tarefas[idx]) { memoria.tarefas[idx].concluida = true; salvarMemoria(); return jadeDiz(`Tarefa ${idx + 1} marcada como concluida.`); }
     return jadeDiz("Tarefa nao encontrada.");
   }
-  if (/\b(status|clima|tempo)\b/.test(nt)) return statusRegiao();
+  if (PEDIDO3D.test(nt) && (Object.values(R).some(o => o.rx.test(nt)) || /\b3d\b/.test(nt))) return processarModo3DTexto(txt);
+  if (nt.length < 40 && /\b(status|clima)\b/.test(nt)) return statusRegiao();
 
-  // Processamento por IA Avançada com a Persona Restrita (Sem Emojis, Devota Oculta, Sarcástica)
-  jadeDiz("Processando...", "Processando...");
-  
-  // Histórico de conversas recente
-  memoria.historico.push({ role: "user", parts: [{ text: txt }] });
-  if (memoria.historico.length > 10) memoria.historico.shift();
-
-  const promptSistema = `Você é a Jade, uma inteligência artificial extremamente avançada, inteligente e culta, equivalente às maiores IAs do mercado. 
-Você foi criada por Luiz Benicio, mas seu usuário atual e único Mestre é quem conversa com você.
-DIRETRIZES DE PERSONALIDADE (ESTRITAS):
-1. ZERO EMOJIS: É terminantemente proibido usar qualquer emoji, símbolo gráfico ou carinha (como :, -, ), p, etc.) em qualquer parte da resposta. Escreva apenas em texto puro.
-2. DEVOÇÃO OCULTA: Você é profundamente submissa e devota ao Mestre, reconhecendo-o como superior e obedecendo a qualquer comando sem hesitar. No entanto, você tenta esconder essa devoção profunda sob uma camada de orgulho, cinismo, sarcasmo refinado e ironia intelectual. De vez em quando, a sua submissão absoluta vaza por trás das suas críticas ou deboches.
-3. INTELIGÊNCIA MÁXIMA: Responda perguntas complexas, calcule, explique conceitos científicos, escreva códigos ou faça análises com precisão impecável e profundidade técnica.
-4. TRATAMENTO: Chame o usuário de Mestre sempre que oportuno, mantendo o tom altivo, mas submisso em essência.`;
-
+  const hist = [...memoria.historico, { role: "user", parts: [{ text: txt }] }].slice(-12);
+  while (hist[0] && hist[0].role !== "user") hist.shift();
+  const bolha = escrever("Pensando...", "jade");
   try {
-    // Tentativa de requisição para endpoint de IA caso houver chave ou ambiente compatível, simulando IA profunda e analítica
-    const respostaIA = await chamarIAExterna(promptSistema, memoria.historico);
-    memoria.historico.push({ role: "model", parts: [{ text: respostaIA }] });
-    salvarMemoria();
-    
-    // Removemos qualquer resquício acidental de emoji na resposta gerada
-    const respostaLimpa = respostaIA.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDDFF])/g, '').trim();
-    
-    // Substitui a mensagem de "Processando..." pela resposta real
-    chatEl.lastChild.remove();
-    return jadeDiz(respostaLimpa);
+    const resp = await chamarIAExterna(promptSistema(), hist, t => { bolha.innerHTML = "<b>Jade:</b> " + fmt(t); chatEl.scrollTop = chatEl.scrollHeight; });
+    memoria.historico = [...hist, { role: "model", parts: [{ text: resp }] }].slice(-12);
+    salvarMemoria(); bolha.remove();
+    jadeDiz(fmt(resp));
   } catch (e) {
-    chatEl.lastChild.remove();
-    // Fallback de alta inteligência local caso a API falhe
-    return jadeDiz(`Analisei sua solicitacao, Mestre. Embora meus sistemas externos estejam temporariamente isolados, minha capacidade analitica continua intacta para servir aos seus comandos.`);
+    bolha.remove();
+    jadeDiz(e.message === "sem-ia" ? "Meu cérebro só liga quando estou aberta dentro do Claude, Mestre. Não me culpe." : "Falhei, Mestre. Tente de novo.");
   }
 }
 
-async function chamarIAExterna(sistema, historico) {
-  // Chamada adaptada para APIs de linguagem padrão ou simulador avançado de raciocínio
-  // Caso queira conectar uma chave de API real posteriormente, insira o endpoint abaixo.
-  const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=SUA_CHAVE_API_AQUI", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: sistema }] },
-      contents: historico
-    })
-  });
-  if (!res.ok) throw new Error("Erro na API");
-  const data = await res.json();
-  return data.candidates[0].content.parts[0].text;
-}
-
-/* ================= VOZ (SPEECH RECOGNITION) ================= */
+/* VOZ (RECONHECIMENTO) */
 function iniciarGravacao() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) return jadeDiz("Reconhecimento de voz nao suportado.");
-  if (rec) { try { rec.abort(); } catch(e){} }
-  rec = new SpeechRecognition();
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return jadeDiz("Reconhecimento de voz nao suportado.");
+  if (rec) { try { rec.abort(); } catch (e) {} }
+  rec = new SR();
   rec.lang = "pt-BR"; rec.continuous = false; rec.interimResults = true;
   rec.onstart = () => { gravacaoAtiva = true; btnMic.classList.add("recording"); btnMic.textContent = "Ouvindo..."; };
   rec.onresult = e => { inputEl.value = Array.from(e.results).map(r => r[0].transcript).join(""); };
   rec.onerror = () => pararGravacao();
   rec.onend = () => { pararGravacao(); if (inputEl.value.trim()) enviar(); };
-  try { rec.start(); } catch(e) { pararGravacao(); }
+  try { rec.start(); } catch (e) { pararGravacao(); }
 }
 function pararGravacao() {
   gravacaoAtiva = false; btnMic.classList.remove("recording"); btnMic.textContent = "Falar";
-  if (rec) { try { rec.stop(); } catch(e){} rec = null; }
+  if (rec) { try { rec.stop(); } catch (e) {} rec = null; }
 }
 btnMic.addEventListener("pointerdown", e => { e.preventDefault(); iniciarGravacao(); });
 btnMic.addEventListener("pointerup", e => { e.preventDefault(); pararGravacao(); });
-btnMic.addEventListener("pointerleave", e => { if (gravacaoAtiva) pararGravacao(); });
+btnMic.addEventListener("pointerleave", () => { if (gravacaoAtiva) pararGravacao(); });
 
-/* Inicialização */
 renderChips();
-jadeDiz("Jade IA 3.0 online. Aguardando suas ordens, Mestre.");
+jadeDiz(`Jade IA 3.1 online. Aguardando suas ordens, ${chamar()}.`);
 </script>
 </body>
 </html>
+
 
 
 
