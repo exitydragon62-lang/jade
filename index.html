@@ -134,9 +134,11 @@ function desbloquearVoz() {
   const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u);
 }
 ["pointerdown", "keydown", "click", "touchstart"].forEach(ev => window.addEventListener(ev, desbloquearVoz, { passive: true }));
+
 function falar(texto) {
   if (!vozLigada || !('speechSynthesis' in window)) return;
-  const t = texto.replace(/<pre>[\s\S]*?<\/pre>/g, ' codigo no chat. ').replace(/<br\s*\/?>/g, '. ').replace(/<[^>]*>?/gm, ' ').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim();
+  // Limpa tags HTML para a voz ler de forma limpa
+  const t = texto.replace(/<pre>[\s\S]*?<\/pre>/g, ' código no chat. ').replace(/<br\s*\/?>/g, '. ').replace(/<[^>]*>?/gm, ' ').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim();
   if (!t) return;
   escolherVoz();
   const id = ++tokenVoz, blocos = []; let cur = "";
@@ -152,6 +154,7 @@ function falar(texto) {
   speechSynthesis.cancel();
   setTimeout(() => { if (id !== tokenVoz) return; speechSynthesis.resume(); lista.forEach(v => speechSynthesis.speak(v)); }, 120);
 }
+
 function escrever(texto, remetente, cru) {
   const div = document.createElement("div");
   div.className = "msg " + (remetente === "user" ? "msg-user" : "msg-jade");
@@ -160,7 +163,13 @@ function escrever(texto, remetente, cru) {
   chatEl.scrollTop = chatEl.scrollHeight;
   return div;
 }
-function jadeDiz(html) { escrever(html, "jade"); falar(html); }
+
+// GARANTE QUE TUDO O QUE A JADE FALA NO CHAT É REPETIDO EM VOZ ALTA AUTOMATICAMENTE
+function jadeDiz(html) { 
+  escrever(html, "jade"); 
+  falar(html); 
+}
+
 function renderChips() {
   const box = $("chips"); box.innerHTML = "";
   ["Que horas sao?", "Nova tarefa: ", "Me explique algo", "Modo 3D", "Minhas tarefas", "O que voce lembra?"].forEach(s => {
@@ -206,7 +215,7 @@ function prepararAberturaSite() {
 const WMO = { 0: "ceu limpo", 1: "quase limpo", 2: "parcialmente nublado", 3: "nublado", 45: "neblina", 48: "neblina", 51: "garoa fraca", 53: "garoa", 55: "garoa forte", 61: "chuva fraca", 63: "chuva", 65: "chuva forte", 80: "pancadas de chuva", 81: "pancadas de chuva", 82: "pancadas fortes", 95: "trovoada", 96: "trovoada com granizo", 99: "trovoada com granizo" };
 function statusRegiao() {
   if (!navigator.geolocation) return jadeDiz("Seu navegador nao permite acessar a localizacao.");
-  jadeDiz("Analisando a sua regiao...", "Verificando a regiao.");
+  jadeDiz("Analisando a sua regiao...");
   navigator.geolocation.getCurrentPosition(async pos => {
     const la = pos.coords.latitude, lo = pos.coords.longitude;
     try {
@@ -216,8 +225,7 @@ function statusRegiao() {
       ]);
       const c = w.current, d = w.daily, cond = WMO[c.weather_code] || "tempo variavel";
       const local = [g.city || g.locality, g.principalSubdivision].filter(Boolean).join(" - ") || "sua regiao";
-      jadeDiz(`<b>Clima em ${esc(local)}</b><br>Temperatura: ${Math.round(c.temperature_2m)}C (sensacao ${Math.round(c.apparent_temperature)}C), ${cond}<br>Umidade: ${c.relative_humidity_2m}% | Vento: ${Math.round(c.wind_speed_10m)} km/h<br>Hoje: min ${Math.round(d.temperature_2m_min[0])}C, max ${Math.round(d.temperature_2m_max[0])}C<br>Chance de chuva: ${d.precipitation_probability_max[0]}%`,
-        `Em ${g.city || g.locality || "sua regiao"} estao ${Math.round(c.temperature_2m)} graus, ${cond}.`);
+      jadeDiz(`<b>Clima em ${esc(local)}</b><br>Temperatura: ${Math.round(c.temperature_2m)}C (sensacao ${Math.round(c.apparent_temperature)}C), ${cond}<br>Umidade: ${c.relative_humidity_2m}% | Vento: ${Math.round(c.wind_speed_10m)} km/h<br>Hoje: min ${Math.round(d.temperature_2m_min[0])}C, max ${Math.round(d.temperature_2m_max[0])}C<br>Chance de chuva: ${d.precipitation_probability_max[0]}%`);
     } catch (e) { jadeDiz("Nao consegui buscar o clima agora."); }
   }, () => jadeDiz("Permissao de localizacao negada ou indisponivel."), { timeout: 10000, maximumAge: 300000 });
 }
@@ -264,7 +272,7 @@ function ativarModo3D() {
   modo3DAtivo = true; ultimoToque3D = Date.now();
   $("container-3d").style.display = "flex";
   inicializarCena3D();
-  jadeDiz("Estudio 3D ativado. Pode ordenar qualquer formato ou estrutura que desejar.", "Estudio 3D ativado.");
+  jadeDiz("Estúdio 3D ativado. Pode ordenar qualquer formato ou estrutura que desejar.");
 }
 function fecharModo3D() {
   modo3DAtivo = false; $("container-3d").style.display = "none";
@@ -435,7 +443,7 @@ function processarModo3DTexto(txt) {
   let chave = acharObjeto(t), palavra = chave ? R[chave].n : null;
   if (!chave) {
     const sobra = t.split(" ").filter(w => w.length > 2 && !FILL.has(w) && !PEDIDO3D.test(w) && !Object.keys(CORES).some(c => w.startsWith(c)) && !TAM.some(([rx]) => rx.test(w)));
-    if (!sobra.length) return jadeDiz("Especifique o que deseja criar no estudio 3D.");
+    if (!sobra.length) return jadeDiz("Especifique o que deseja criar no estúdio 3D.");
     chave = 'livre'; palavra = sobra.slice(-1)[0];
   }
   adicionarObjeto3D(chave, mat, cor, palavra, k);
@@ -514,10 +522,10 @@ async function processarMensagemAvancada(t) {
   }
 
   if (PERGUNTA.test(t) || tl.includes("quem foi") || tl.includes("o que é") || tl.includes("fale sobre")) {
-    jadeDiz("Pesquisando...", "Pesquisando.");
+    jadeDiz("Pesquisando...");
     const res = await wiki(t.replace(PERGUNTA, "").trim() || t);
     if (res) {
-      return jadeDiz(`<b>${esc(res.titulo)}</b><br>${esc(res.texto)}`, res.texto);
+      return jadeDiz(`<b>${esc(res.titulo)}</b><br>${esc(res.texto)}`);
     }
   }
 
@@ -578,7 +586,6 @@ renderChips();
 </script>
 </body>
 </html>
-
 
 
 
