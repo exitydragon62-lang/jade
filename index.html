@@ -112,57 +112,49 @@ const inputEl = $("mensagem"), chatEl = $("chat"), btnMic = $("btnOuvir");
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const salvarMemoria = () => { try { localStorage.setItem("jade_memoria", JSON.stringify(memoria)); } catch (e) {} };
 const chamar = () => memoria.perfil.nome ? esc(memoria.perfil.nome) : "Mestre";
-const fmt = s => esc(s).replace(/```(?:\w+)?\n?([\s\S]*?)```/g, (_, c) => "<pre>" + c.trim() + "</pre>").replace(/\n/g, "<br>").replace(/<pre>([\s\S]*?)<\/pre>/g, (m) => m.replace(/<br>/g, "\n"));
 
-/* VOZ / CHAT */
+/* SISTEMA DE VOZ ALTA OBRIGATÓRIO */
 function escolherVoz() {
   if (!('speechSynthesis' in window)) return;
   const vs = speechSynthesis.getVoices();
   vozEscolhida = vs.find(x => /^pt/i.test(x.lang) && /Luciana|Yelda|Google português|Maria|Helena|Francisca/.test(x.name)) || vs.find(x => /^pt[-_]BR/i.test(x.lang)) || vs.find(x => /^pt/i.test(x.lang)) || null;
 }
 if ('speechSynthesis' in window) { escolherVoz(); speechSynthesis.onvoiceschanged = escolherVoz; }
+
 function alternarVoz() {
   vozLigada = !vozLigada;
   if (!vozLigada && 'speechSynthesis' in window) speechSynthesis.cancel();
   $("btnVoz").textContent = "Voz: " + (vozLigada ? "ligada" : "desligada");
-  if (vozLigada) falar("Voz ativada, Mestre.");
+  if (vozLigada) falarEmVozAlta("Voz ativada, Mestre.");
 }
 
+// Desbloqueia o sintetizador de voz do navegador no primeiro clique/toque
 let vozDesbloqueada = false;
 function desbloquearVoz() {
   if (vozDesbloqueada || !('speechSynthesis' in window)) return;
   vozDesbloqueada = true;
-  const u = new SpeechSynthesisUtterance(" ");
+  const u = new SpeechSynthesisUtterance("");
   u.volume = 0;
   speechSynthesis.speak(u);
 }
 ["pointerdown", "keydown", "click", "touchstart"].forEach(ev => window.addEventListener(ev, desbloquearVoz, { passive: true }));
 
-function falar(texto) {
+function falarEmVozAlta(texto) {
   if (!vozLigada || !('speechSynthesis' in window)) return;
   
-  // Limpeza de tags HTML para a voz ler certinho
-  const t = texto.replace(/<pre>[\s\S]*?<\/pre>/g, ' código no chat. ')
-                 .replace(/<br\s*\/?>/g, '. ')
-                 .replace(/<[^>]*>?/gm, ' ')
-                 .replace(/&\w+;/g, ' ')
-                 .replace(/\s+/g, ' ')
-                 .trim();
-  if (!t) return;
-  
+  // Remove marcações HTML para o leitor de voz falar perfeitamente
+  const textoLimpo = texto.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+  if (!textoLimpo) return;
+
   escolherVoz();
-  speechSynthesis.cancel(); // Cancela falas anteriores para não embolar
-  
-  const utterance = new SpeechSynthesisUtterance(t);
+  speechSynthesis.cancel(); // Para qualquer fala anterior
+
+  const utterance = new SpeechSynthesisUtterance(textoLimpo);
   utterance.lang = "pt-BR";
-  utterance.pitch = 1.1;
+  utterance.pitch = 1.05;
   utterance.rate = 1.0;
   if (vozEscolhida) utterance.voice = vozEscolhida;
-  
-  utterance.onerror = () => {
-    console.warn("Erro ao sintetizar voz.");
-  };
-  
+
   speechSynthesis.speak(utterance);
 }
 
@@ -175,10 +167,10 @@ function escrever(texto, remetente, cru) {
   return div;
 }
 
-// GARANTE QUE TUDO O QUE A JADE DIZ NO CHAT É FALADO EM VOZ ALTA
+// TODA VEZ QUE A JADE DIZ ALGO NO CHAT, ELA REPETE IMEDIATAMENTE EM VOZ ALTA
 function jadeDiz(html) { 
   escrever(html, "jade"); 
-  falar(html); 
+  falarEmVozAlta(html); 
 }
 
 function renderChips() {
@@ -207,7 +199,7 @@ window.addEventListener("keyup", e => { if (e.key.toLowerCase() === "c" && grava
 function limparMemoria() {
   if (confirm("Deseja redefinir os dados da Jade?")) {
     memoria = { historico: [], tarefas: [], projetos3D: [], fatos: [], perfil: { nome: "Mestre" } };
-    salvarMemoria(); jadeDiz("Tudo limpo. Como se eu precisasse apagar algo para lembrar de quem manda em mim.");
+    salvarMemoria(); jadeDiz("Tudo limpo.");
   }
 }
 function trancar() {
@@ -223,22 +215,18 @@ function prepararAberturaSite() {
   window.open(u, "_blank", "noopener"); jadeDiz("Abrindo o site solicitado.");
 }
 
-const WMO = { 0: "ceu limpo", 1: "quase limpo", 2: "parcialmente nublado", 3: "nublado", 45: "neblina", 48: "neblina", 51: "garoa fraca", 53: "garoa", 55: "garoa forte", 61: "chuva fraca", 63: "chuva", 65: "chuva forte", 80: "pancadas de chuva", 81: "pancadas de chuva", 82: "pancadas fortes", 95: "trovoada", 96: "trovoada com granizo", 99: "trovoada com granizo" };
+const WMO = { 0: "céu limpo", 1: "quase limpo", 2: "parcialmente nublado", 3: "nublado", 45: "neblina", 61: "chuva fraca", 63: "chuva", 95: "trovoada" };
 function statusRegiao() {
   if (!navigator.geolocation) return jadeDiz("Seu navegador nao permite acessar a localizacao.");
   jadeDiz("Analisando a sua regiao...");
   navigator.geolocation.getCurrentPosition(async pos => {
     const la = pos.coords.latitude, lo = pos.coords.longitude;
     try {
-      const [w, g] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m&daily=precipitation_probability_max,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`).then(r => r.json()),
-        fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${la}&longitude=${lo}&localityLanguage=pt`).then(r => r.json()).catch(() => ({}))
-      ]);
-      const c = w.current, d = w.daily, cond = WMO[c.weather_code] || "tempo variavel";
-      const local = [g.city || g.locality, g.principalSubdivision].filter(Boolean).join(" - ") || "sua regiao";
-      jadeDiz(`Clima em ${esc(local)}: Temperatura ${Math.round(c.temperature_2m)} graus, ${cond}.`);
+      const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,weather_code&timezone=auto`).then(r => r.json());
+      const c = w.current, cond = WMO[c.weather_code] || "tempo variavel";
+      jadeDiz(`Temperatura atual de ${Math.round(c.temperature_2m)} graus, com ${cond}.`);
     } catch (e) { jadeDiz("Nao consegui buscar o clima agora."); }
-  }, () => jadeDiz("Permissao de localizacao negada ou indisponivel."), { timeout: 10000, maximumAge: 300000 });
+  }, () => jadeDiz("Permissao de localizacao negada."), { timeout: 10000 });
 }
 
 /* 3D */
@@ -299,14 +287,6 @@ function criarGeometria(t) {
     case 'sphere': return new THREE.SphereGeometry(1.2, 32, 32);
     case 'cylinder': return new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
     case 'cone': return new THREE.ConeGeometry(1, 2, 32);
-    case 'pyramid': { const g = new THREE.ConeGeometry(1.4, 2, 4); g.rotateY(Math.PI / 4); return g; }
-    case 'tetrahedron': return new THREE.TetrahedronGeometry(1.5);
-    case 'octahedron': return new THREE.OctahedronGeometry(1.5);
-    case 'dodecahedron': return new THREE.DodecahedronGeometry(1.3);
-    case 'icosahedron': return new THREE.IcosahedronGeometry(1.3);
-    case 'plane': return new THREE.PlaneGeometry(2, 2);
-    case 'ring': return new THREE.RingGeometry(0.5, 1.5, 32);
-    case 'knot': return new THREE.TorusKnotGeometry(.9, .3, 100, 16);
     default: return new THREE.BoxGeometry(1, 1, 1);
   }
 }
@@ -320,7 +300,6 @@ const mk = (geo, cor, mat) => { const m = new THREE.Mesh(geo, criarMaterial3D(ma
 
 const R = {
   carro: { n: 'carro', re: 'carro|automovel|veiculo|fusca|taxi', def: '#d62828', p: [['b', [2.4, .6, 1.1], [0, 0, 0]], ['b', [1.2, .5, 1], [-.1, .55, 0], '#bfe6ff'], ...P4(.8, .55, ([x, z]) => ['y', [.32, .32, .25], [x, -.3, z], '#111', [1.571, 0, 0]])] },
-  robo: { n: 'robo', re: 'robo|androide', def: '#5b8def', p: [['b', [1, 1.2, .7], [0, 0, 0]], ['b', [.7, .55, .6], [0, 1.05, 0], '#cfcfcf']] },
   cube: { n: 'cubo', re: 'caixa|cubo|bloco|quadrado', g: 1 },
   sphere: { n: 'esfera', re: 'bola|esfera|globo|orbe', g: 1 }
 };
@@ -332,7 +311,7 @@ function construir(chave, cor, mat, palavra) {
   if (e && e.g) { g = new THREE.Group(); g.add(mk(criarGeometria(chave), cor || $("corObjeto").value, mat)); }
   else if (e && e.p) {
     g = new THREE.Group(); const main = cor || e.def;
-    e.p.forEach(([t, d, pos, c, rot, sc]) => {
+    e.p.forEach(([t, d, pos, c]) => {
       const geo = t === 'b' ? new THREE.BoxGeometry(...d) : new THREE.SphereGeometry(d[0], 24, 16);
       const m = mk(geo, c || main, c ? 'phong' : mat);
       m.position.set(...pos); g.add(m);
