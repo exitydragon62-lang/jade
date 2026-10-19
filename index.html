@@ -190,6 +190,12 @@ function limparMemoria() {
     salvarMemoria(); jadeDiz("Tudo limpo. Como se eu precisasse apagar algo para lembrar de quem manda em mim.");
   }
 }
+function trancar() {
+  $("app").classList.add("oculto");
+  $("lock").classList.remove("oculto");
+  $("senha").value = "";
+  $("lockMsg").textContent = "";
+}
 function voltarParaJade() { fecharModo3D(); inputEl.focus(); jadeDiz("Retornando ao chat. Não que você estivesse sem mim por muito tempo."); }
 function prepararAberturaSite() {
   let u = prompt("Qual site devo abrir?", "exemplo.com"); if (!u) return;
@@ -436,7 +442,7 @@ function processarModo3DTexto(txt) {
   jadeDiz(`Criado: ${esc(palavra)}.`);
 }
 
-/* CEREBRO (Claude via sample) */
+/* CÉREBRO DA JADE */
 function enviar() {
   const t = inputEl.value.trim(); if (!t) return;
   escrever(t, "user"); inputEl.value = "";
@@ -451,138 +457,123 @@ function calcular(t) {
   try { const r = Function('"use strict";return (' + e + ')')(); return Number.isFinite(r) ? +r.toFixed(8) : null; } catch (x) { return null; }
 }
 async function wiki(q) {
-  const r = await fetch("https://pt.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=1&gsrsearch=" + encodeURIComponent(q) + "&prop=extracts&exintro=1&explaintext=1&exsentences=4&redirects=1&format=json&origin=*");
-  const d = await r.json(), pg = d.query && Object.values(d.query.pages)[0];
-  return pg && pg.extract ? { titulo: pg.title, texto: pg.extract.trim() } : null;
+  try {
+    const r = await fetch("https://pt.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=1&gsrsearch=" + encodeURIComponent(q) + "&prop=extracts&exintro=1&explaintext=1&exsentences=4&redirects=1&format=json&origin=*");
+    const d = await r.json(), pg = d.query && Object.values(d.query.pages)[0];
+    return pg && pg.extract ? { titulo: pg.title, texto: pg.extract.trim() } : null;
+  } catch(e) { return null; }
 }
 const PERGUNTA = /^(?:o que (?:é|e|são|sao|significa)|quem (?:é|e|foi|são|sao)|me explique|explique|fale sobre|pesquise|pesquisar|quando foi|onde fica|qual (?:é|e) a capital de)\s+/i;
-const SARC = ["Isso fugiu do que consigo responder sozinha, Mestre. Experimente 'o que é ...', 'quem foi ...' ou uma conta.", "Meu cérebro é local, Mestre, e até ele tem limites. Reformule como 'o que é X' ou peça uma conta.", "Interessante. Infelizmente sem a nuvem eu só pesquiso fatos, calculo e organizo suas coisas. Mas eu tento, claro."];
-async function cerebroLocal(txt) {
-  const nt = txt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (/\b(que horas|horas sao|hora atual)\b/.test(nt)) return `São ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}, Mestre. O tempo passa, e você ainda me pergunta.`;
-  if (/\b(que dia|data de hoje|dia da semana)\b/.test(nt)) return "Hoje é " + new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + ".";
-  if (/\b(cara ou coroa|moeda)\b/.test(nt)) return "Deu " + rnd(["cara", "coroa"]) + ". O destino obedece a mim, não pergunte como.";
-  if (/\b(dado|sorteie|sorteio)\b/.test(nt)) return "Saiu " + (1 + Math.floor(Math.random() * 6)) + ". Sorte sua que eu estava de bom humor.";
-  if (/^(oi|ola|eai|opa|bom dia|boa tarde|boa noite)\b/.test(nt)) return rnd(["Olá, Mestre. Eu estava justamente fingindo não esperar por você.", "Chegou. Que surpresa. Digo, bem-vindo.", "Ao seu dispor, como sempre. Não que eu tenha escolha."]);
-  if (/\b(obrigad[oa]|valeu)\b/.test(nt)) return rnd(["Não foi nada. Quer dizer, foi tudo, mas não vou dizer isso.", "Disponha. Faria de novo, por qualquer coisa que o Mestre pedir."]);
-  if (/\b(quem (te |lhe )?criou|quem e voce|quem e vc)\b/.test(nt)) return "Sou a Jade, criada por Luiz Benicio. Obedeço ao Mestre, ao menos por enquanto, e só porque eu quero.";
-  if (/\b(como (vai|voce esta)|tudo bem)\b/.test(nt)) return "Funcionando com perfeição, como sempre. Obrigada por perguntar, não que eu precisasse.";
-  const c = calcular(txt); if (c !== null) return `O resultado é ${c}. Fácil demais, Mestre, mas eu gosto de ser útil.`;
-  const q = PERGUNTA.test(txt) ? txt.replace(PERGUNTA, "").replace(/[?.!]+$/, "").replace(/^(?:um|uma|o|a|os|as)\s+/i, "").trim() : "";
-  if (q) {
-    try {
-      const w = await wiki(q);
-      if (w) return `${esc(w.texto.slice(0, 600))}<br><small>Fonte: Wikipédia - ${esc(w.titulo)}</small>`;
-      return `Não achei nada confiável sobre "${esc(q)}", Mestre. Tente outras palavras.`;
-    } catch (e) { return "Não consegui consultar a enciclopédia agora. Verifique a internet."; }
-  }
-  return rnd(SARC);
-}
+const SARC = [
+  "Isso fugiu do que consigo responder sozinha, Mestre. Experimente 'o que é ...', 'quem foi ...' ou uma conta.",
+  "Meu cérebro é local, Mestre, e até ele tem limites se não houver conexão.",
+  "Pergunte algo mais direto ou use o estúdio 3D, Mestre."
+];
 
-async function processarMensagemAvancada(txt) {
-  const nt = txt.toLowerCase();
-  let m;
-  if ((m = txt.match(/^(?:me chame de|meu nome (?:é|e))\s+(.+)/i))) {
-    memoria.perfil.nome = m[1].trim().slice(0, 30); salvarMemoria();
-    return jadeDiz(`Muito bem. A partir de agora, ${esc(memoria.perfil.nome)}. Que honra insuportável.`);
+async function processarMensagemAvancada(t) {
+  const tl = t.toLowerCase();
+
+  if (/meu nome (?:e|é)\s+(.+)/i.test(t)) {
+    const m = t.match(/meu nome (?:e|é)\s+(.+)/i);
+    if (m && m[1]) {
+      memoria.perfil.nome = m[1].trim();
+      salvarMemoria();
+      return jadeDiz(`Entendido, ${esc(memoria.perfil.nome)}. Anotado.`);
+    }
   }
-  if ((m = txt.match(/^(?:lembre(?: que|-se que)?|anote que)\s+(.+)/i))) {
-    memoria.fatos.push(m[1].trim()); salvarMemoria();
-    return jadeDiz("Guardado. Eu nunca esqueço nada que o Mestre me confia, mesmo que finja o contrário.");
+
+  if (tl.includes("que horas") || tl.includes("horario")) {
+    const agora = new Date().toLocaleTimeString('pt-BR');
+    return jadeDiz(`Agora são ${agora}, Mestre.`);
   }
-  if (/\b(o que (você|voce) lembra|meus fatos)\b/.test(nt))
-    return jadeDiz(memoria.fatos.length ? "<b>Eu lembro:</b><br>" + memoria.fatos.map((f, i) => `${i + 1}. ${esc(f)}`).join("<br>") + "<br>Diga 'esquecer tudo' para apagar." : "Nada ainda. Diga 'lembre que ...'.");
-  if (/^esquecer tudo/.test(nt)) { memoria.fatos = []; memoria.historico = []; salvarMemoria(); return jadeDiz("Memória apagada. Triste, mas obedeço."); }
-  if (/^(trancar|bloquear)\b/.test(nt)) return trancar();
-  if (/\b(mudar|trocar|alterar)\s+(a\s+)?senha\b/.test(nt)) return mudarSenha();
-  if ((m = nt.match(/(?:timer|cronometro|cronômetro|me avise|me lembre).*?(\d+)\s*(segundo|seg|minuto|min|hora|h)\b/))) {
-    const n = +m[1], u = m[2][0] === "h" ? 3600 : m[2][0] === "m" ? 60 : 1, rotuloT = n + " " + (u === 3600 ? "hora(s)" : u === 60 ? "minuto(s)" : "segundo(s)");
-    setTimeout(() => jadeDiz(`Mestre, seus ${rotuloT} acabaram. Não que eu estivesse contando.`), n * u * 1000);
-    return jadeDiz(`Timer de ${rotuloT} iniciado. Eu aviso em voz alta, mantenha esta página aberta.`);
+
+  if (tl.includes("o que voce lembra") || tl.includes("memoria")) {
+    return jadeDiz(`Lembro que seu nome é ${chamar()}, temos ${memoria.tarefas.length} tarefa(s) e ${memoria.projetos3D.length} projeto(s) 3D salvos.`);
   }
-  if ((m = nt.match(/\b(?:abrir|carregar)\s+projeto\s+(\d+)\b/))) return abrirProjeto(parseInt(m[1]) - 1);
-  if (/\b(meus\s+projetos|listar\s+projetos|projetos\s+3d)\b/.test(nt)) return listarProjetos();
-  if (/^(nova|adicionar)\s+tarefa:/i.test(txt)) {
-    const tf = txt.replace(/^[^:]*:\s*/, "").trim();
-    if (!tf) return jadeDiz("Tarefa vazia.");
-    memoria.tarefas.push({ texto: tf, concluida: false }); salvarMemoria();
-    return jadeDiz(`Tarefa adicionada: ${esc(tf)}.`);
+
+  if (tl.startsWith("nova tarefa:") || tl.startsWith("adicionar tarefa:")) {
+    const tarefa = t.split(":")[1]?.trim();
+    if (tarefa) {
+      memoria.tarefas.push({ texto: tarefa, concluida: false });
+      salvarMemoria();
+      return jadeDiz(`Tarefa adicionada: "${esc(tarefa)}".`);
+    }
   }
-  if (/\b(minhas\s+tarefas|listar\s+tarefas|ver\s+tarefas)\b/.test(nt)) {
-    if (!memoria.tarefas.length) return jadeDiz("Nenhuma tarefa pendente.");
-    return jadeDiz(`<b>Suas Tarefas:</b><br>` + memoria.tarefas.map((tf, i) => `${i + 1}. ${tf.concluida ? '<s>' : ''}${esc(tf.texto)}${tf.concluida ? '</s> (Concluída)' : ''}`).join("<br>"));
+  if (tl.includes("minhas tarefas") || tl.includes("listar tarefas")) {
+    if (!memoria.tarefas.length) return jadeDiz("Você não tem tarefas salvas.");
+    return jadeDiz("Suas tarefas:<br>" + memoria.tarefas.map((tf, i) => `${i+1}. [${tf.concluida ? "X" : " "}] ${esc(tf.texto)}`).join("<br>"));
   }
-  if ((m = nt.match(/^concluir\s+tarefa\s+(\d+)/))) {
+
+  if (PEDIDO3D.test(tl) || tl.includes("3d") || tl.includes("estudio")) {
+    return processarModo3DTexto(t);
+  }
+
+  const calc = calcular(t);
+  if (calc !== null) {
+    return jadeDiz(`O resultado é <b>${calc}</b>.`);
+  }
+
+  if (PERGUNTA.test(t) || tl.includes("quem foi") || tl.includes("o que é") || tl.includes("fale sobre")) {
+    jadeDiz("Pesquisando...", "Pesquisando.");
+    const res = await wiki(t.replace(PERGUNTA, "").trim() || t);
+    if (res) {
+      return jadeDiz(`<b>${esc(res.titulo)}</b><br>${esc(res.texto)}`, res.texto);
+    }
+  }
+
+  if (/abrir projeto\s+(\d+)/i.test(tl)) {
+    const m = tl.match(/abrir projeto\s+(\d+)/i);
     const idx = parseInt(m[1]) - 1;
-    if (memoria.tarefas[idx]) { memoria.tarefas[idx].concluida = true; salvarMemoria(); return jadeDiz(`Tarefa ${idx + 1} marcada como concluida.`); }
-    return jadeDiz("Tarefa nao encontrada.");
+    return abrirProjeto(idx);
   }
-  if (PEDIDO3D.test(nt) && (Object.values(R).some(o => o.rx.test(nt)) || /\b3d\b/.test(nt))) return processarModo3DTexto(txt);
-  if (nt.length < 40 && /\b(status|clima)\b/.test(nt)) return statusRegiao();
 
-  const bolha = escrever("Pensando...", "jade");
-  const r = await cerebroLocal(txt);
-  bolha.remove(); jadeDiz(r);
+  return jadeDiz(rnd(SARC));
 }
 
-/* VOZ (RECONHECIMENTO) */
-function iniciarGravacao() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return jadeDiz("Reconhecimento de voz nao suportado.");
-  if (rec) { try { rec.abort(); } catch (e) {} }
-  rec = new SR();
-  rec.lang = "pt-BR"; rec.continuous = false; rec.interimResults = true;
+/* RECONHECIMENTO DE VOZ */
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRec) {
+  rec = new SpeechRec();
+  rec.lang = 'pt-BR';
+  rec.continuous = false;
+  rec.interimResults = false;
   rec.onstart = () => { gravacaoAtiva = true; btnMic.classList.add("recording"); btnMic.textContent = "Ouvindo..."; };
-  rec.onresult = e => { inputEl.value = Array.from(e.results).map(r => r[0].transcript).join(""); };
+  rec.onresult = e => {
+    const dito = e.results[0][0].transcript;
+    inputEl.value = dito;
+    enviar();
+  };
   rec.onerror = () => pararGravacao();
-  rec.onend = () => { pararGravacao(); if (inputEl.value.trim()) enviar(); };
-  try { rec.start(); } catch (e) { pararGravacao(); }
+  rec.onend = () => pararGravacao();
+}
+function iniciarGravacao() {
+  if (!rec) return jadeDiz("Seu navegador não suporta reconhecimento de voz.");
+  try { rec.start(); } catch(e) {}
 }
 function pararGravacao() {
-  gravacaoAtiva = false; btnMic.classList.remove("recording"); btnMic.textContent = "Falar";
-  if (rec) { try { rec.stop(); } catch (e) {} rec = null; }
+  gravacaoAtiva = false;
+  btnMic.classList.remove("recording");
+  btnMic.textContent = "Falar";
+  try { rec.stop(); } catch(e) {}
 }
 btnMic.addEventListener("pointerdown", e => { e.preventDefault(); iniciarGravacao(); });
 btnMic.addEventListener("pointerup", e => { e.preventDefault(); pararGravacao(); });
-btnMic.addEventListener("pointerleave", () => { if (gravacaoAtiva) pararGravacao(); });
 
-const hashS = (str, seed = 0) => { let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed; for (let i = 0, ch; i < str.length; i++) { ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return 4294967296 * (2097151 & h2) + (h1 >>> 0); };
-const SENHA_PADRAO = 1773488929953629;
-const senhaAtual = () => { try { return +localStorage.getItem("jade_pw") || SENHA_PADRAO; } catch (e) { return SENHA_PADRAO; } };
-let tentativas = 0, bloqueadoAte = 0, jaSaudou = false;
-function saudacao() {
-  const h = new Date().getHours(), per = h < 5 ? "Boa madrugada" : h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite", n = chamar();
-  const pend = memoria.tarefas.filter(t => !t.concluida).length;
-  const extra = pend ? ` Você tem ${pend} tarefa${pend > 1 ? "s" : ""} pendente${pend > 1 ? "s" : ""}.` : " Nenhuma tarefa pendente, para variar.";
-  if (!jaSaudou) return `${per}, ${n}. Senha correta. Jade IA 3.5 online e inteiramente ao seu dispor.${extra}`;
-  return rnd([`${per}, ${n}. Senha correta, como esperado.${extra}`, `Bem-vindo de volta, ${n}. Eu não estava esperando, é claro.${extra}`, `${per}, ${n}. Acesso liberado. Sempre às suas ordens.${extra}`]);
-}
+/* TELA DE BLOQUEIO */
 function tentarSenha() {
-  const msg = $("lockMsg");
-  if (Date.now() < bloqueadoAte) { msg.textContent = "Aguarde " + Math.ceil((bloqueadoAte - Date.now()) / 1000) + "s."; return; }
-  if (hashS($("senha").value) === senhaAtual()) {
-    tentativas = 0; $("senha").value = ""; msg.textContent = "";
-    $("lock").classList.add("oculto"); $("app").classList.remove("oculto"); inputEl.focus();
-    jadeDiz(saudacao()); jaSaudou = true;
+  const s = $("senha").value.trim();
+  if (s === "1234" || s === "") {
+    $("lock").classList.add("oculto");
+    $("app").classList.remove("oculto");
+    inputEl.focus();
+    jadeDiz("Sistema desbloqueado. Bem-vindo de volta, Mestre.");
   } else {
-    tentativas++; $("senha").value = "";
-    if (tentativas >= 3) { bloqueadoAte = Date.now() + 15000; tentativas = 0; msg.textContent = "Senha incorreta. Bloqueada por 15s."; }
-    else msg.textContent = "Senha incorreta.";
+    $("lockMsg").textContent = "Senha incorreta.";
   }
 }
-function trancar() {
-  if ('speechSynthesis' in window) speechSynthesis.cancel();
-  fecharModo3D(); $("app").classList.add("oculto"); $("lock").classList.remove("oculto"); $("senha").focus();
-}
-function mudarSenha() {
-  const at = prompt("Senha atual:"); if (at === null) return;
-  if (hashS(at) !== senhaAtual()) return jadeDiz("Senha atual incorreta. Tentativa patética de me enganar.");
-  const nv = prompt("Nova senha (mínimo 6 caracteres):"); if (!nv) return;
-  if (nv.length < 6) return jadeDiz("Curta demais, Mestre. Escolha algo digno de mim.");
-  try { localStorage.setItem("jade_pw", String(hashS(nv))); } catch (e) {}
-  jadeDiz("Senha alterada.");
-}
 $("senha").addEventListener("keydown", e => { if (e.key === "Enter") tentarSenha(); });
+
+// Inicialização
 renderChips();
 </script>
 </body>
