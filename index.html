@@ -108,9 +108,12 @@ let gravacaoAtiva = false, rec = null, vozLigada = true, vozEscolhida = null;
 let modo3DAtivo = false, scene3D, camera3D, renderer3D, grupoProjeto3D, controls3D, animId3D = null, ro3D = null;
 let ultimoToque3D = Date.now(), wire = false;
 let estadoEnsino = 0; // 0: normal, 1: aguardando pergunta, 2: aguardando resposta
+let perguntaTemporaria = "";
 
 const $ = id => document.getElementById(id);
 const inputEl = $("mensagem"), chatEl = $("chat"), btnMic = $("btnOuvir");
+
+const normalizar = str => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[?.,!]/g, "").trim();
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const salvarMemoria = () => { try { localStorage.setItem("jade_memoria", JSON.stringify(memoria)); } catch (e) {} };
 const chamar = () => memoria.perfil.nome ? esc(memoria.perfil.nome) : "Mestre";
@@ -226,7 +229,6 @@ function statusRegiao() {
 }
 
 /* 3D */
-let perguntaTemporaria = "";
 const toque3D = () => { ultimoToque3D = Date.now(); if (controls3D) controls3D.autoRotate = false; };
 function inicializarCena3D() {
   const c = $("canvas-3d");
@@ -352,7 +354,7 @@ function alternarWire() {
   grupoProjeto3D && grupoProjeto3D.traverse(n => { if (n.isMesh) n.material.wireframe = wire; });
 }
 
-/* CÉREBRO DA JADE (COM FLUXO DE APRENDIZADO DO MESTRE) */
+/* CÉREBRO DA JADE (FLUXO DE ENSINO BLINDADO) */
 function enviar() {
   const t = inputEl.value.trim(); if (!t) return;
   escrever(t, "user"); inputEl.value = "";
@@ -369,34 +371,36 @@ function calcular(t) {
 
 async function processarMensagemAvancada(t) {
   const tl = t.toLowerCase();
+  const tlNormalizado = normalizar(t);
 
-  // 1. GERENCIAMENTO DO MODO DE ENSINO (O Mestre ensina algo novo)
+  // 1. VERIFICAR SE JÁ EXISTE NA MEMÓRIA DE APRENDIZADO ANTES DE QUALQUER COISA
+  if (memoria.aprendizados[tlNormalizado]) {
+    return jadeDiz(memoria.aprendizados[tlNormalizado]);
+  }
+
+  // 2. GERENCIAMENTO DO MODO DE ENSINO (Passo 1: Salvando a Pergunta)
   if (estadoEnsino === 1) {
-    perguntaTemporaria = t.toLowerCase().replace(/[?.,!]/g, "").trim();
+    perguntaTemporaria = normalizar(t);
     estadoEnsino = 2;
     return jadeDiz("Entendido. Agora me diga: qual deve ser a resposta exata para essa pergunta?");
   }
+  
+  // 3. GERENCIAMENTO DO MODO DE ENSINO (Passo 2: Salvando a Resposta)
   else if (estadoEnsino === 2) {
     const respostaEnsino = t;
     memoria.aprendizados[perguntaTemporaria] = respostaEnsino;
     salvarMemoria();
     estadoEnsino = 0;
-    return jadeDiz(`Aprendido, Mestre! A partir de agora, quando você me perguntar "${perguntaTemporaria}", eu responderei: "${respostaEnsino}".`);
+    return jadeDiz(`Aprendido, Mestre! Agora, sempre que você me perguntar "${perguntaTemporaria}", eu responderei: "${respostaEnsino}".`);
   }
 
-  // Ativar o modo de ensino
+  // Iniciar comando de ensino
   if (tl.includes("posso te ensinar") || tl.includes("quero te ensinar") || tl.includes("deixa te ensinar")) {
     estadoEnsino = 1;
     return jadeDiz("Estou pronta, Mestre! Qual é a <b>pergunta</b> que você quer me ensinar?");
   }
 
-  // 2. VERIFICAR SE JÁ APRENDEU ISSO ANTES
-  const perguntaLimpa = tl.replace(/[?.,!]/g, "").trim();
-  if (memoria.aprendizados[perguntaLimpa]) {
-    return jadeDiz(memoria.aprendizados[perguntaLimpa]);
-  }
-
-  // Outros comandos normais
+  // Comandos normais do sistema
   if (/meu nome (?:e|é)\s+(.+)/i.test(t)) {
     const m = t.match(/meu nome (?:e|é)\s+(.+)/i);
     if (m && m[1]) {
@@ -413,7 +417,7 @@ async function processarMensagemAvancada(t) {
 
   if (tl.includes("o que voce lembra")) {
     const qtdeAprendidos = Object.keys(memoria.aprendizados).length;
-    return jadeDiz(`Lembro que seu nome é ${chamar()}, temos ${memoria.tarefas.length} tarefa(s), ${memoria.projetos3D.length} projeto(s) 3D e ${qtdeAprendidos} lição(ões) ensinadas por você.`);
+    return jadeDiz(`Lembro que seu nome é ${chamar()}, temos ${memoria.tarefas.length} tarefa(s), ${memoria.projetos3D.length} projeto(s) 3D e ${qtdeAprendidos} lição(ões) ensinadas.`);
   }
 
   const calc = calcular(t);
@@ -421,7 +425,7 @@ async function processarMensagemAvancada(t) {
     return jadeDiz(`O resultado é ${calc}.`);
   }
 
-  return jadeDiz("Entendido, Mestre. Se quiser me ensinar sobre isso, diga 'posso te ensinar'.");
+  return jadeDiz("Entendido, Mestre. Se quiser me ensinar algo novo, diga 'posso te ensinar'.");
 }
 
 /* RECONHECIMENTO DE VOZ */
