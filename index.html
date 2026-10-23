@@ -99,13 +99,15 @@ button:active{transform:scale(.95)}
 </div>
 
 <script>
-let memoria = { historico: [], tarefas: [], projetos3D: [], fatos: [], perfil: { nome: "Mestre" } };
+let memoria = { historico: [], tarefas: [], projetos3D: [], aprendizados: {}, perfil: { nome: "Mestre" } };
 try { Object.assign(memoria, JSON.parse(localStorage.getItem("jade_memoria")) || {}); } catch (e) {}
 memoria.perfil = memoria.perfil || { nome: "Mestre" };
-memoria.fatos = memoria.fatos || [];
+memoria.aprendizados = memoria.aprendizados || {};
+
 let gravacaoAtiva = false, rec = null, vozLigada = true, vozEscolhida = null;
 let modo3DAtivo = false, scene3D, camera3D, renderer3D, grupoProjeto3D, controls3D, animId3D = null, ro3D = null;
 let ultimoToque3D = Date.now(), wire = false;
+let estadoEnsino = 0; // 0: normal, 1: aguardando pergunta, 2: aguardando resposta
 
 const $ = id => document.getElementById(id);
 const inputEl = $("mensagem"), chatEl = $("chat"), btnMic = $("btnOuvir");
@@ -169,10 +171,10 @@ function jadeDiz(html) {
 
 function renderChips() {
   const box = $("chips"); box.innerHTML = "";
-  ["Que horas sao?", "Me ensina Godot", "Nova tarefa: ", "Modo 3D", "Minhas tarefas", "O que voce lembra?"].forEach(s => {
+  ["Que horas sao?", "Posso te ensinar", "Nova tarefa: ", "Modo 3D", "Minhas tarefas", "O que voce lembra?"].forEach(s => {
     const c = document.createElement("button");
     c.type = "button"; c.className = "chip"; c.textContent = s;
-    c.onclick = () => { inputEl.value = s; if (s.endsWith(": ") || s === "Me ensina Godot") { inputEl.focus(); if (s !== "Nova tarefa: ") inputEl.value = "Me ensina "; } else enviar(); };
+    c.onclick = () => { inputEl.value = s; if (s.endsWith(": ")) { inputEl.focus(); } else enviar(); };
     box.appendChild(c);
   });
 }
@@ -192,8 +194,8 @@ window.addEventListener("keyup", e => { if (e.key.toLowerCase() === "c" && grava
 
 function limparMemoria() {
   if (confirm("Deseja redefinir os dados da Jade?")) {
-    memoria = { historico: [], tarefas: [], projetos3D: [], fatos: [], perfil: { nome: "Mestre" } };
-    salvarMemoria(); jadeDiz("Tudo limpo.");
+    memoria = { historico: [], tarefas: [], projetos3D: [], aprendizados: {}, perfil: { nome: "Mestre" } };
+    salvarMemoria(); jadeDiz("Tudo limpo, Mestre.");
   }
 }
 function trancar() {
@@ -224,6 +226,7 @@ function statusRegiao() {
 }
 
 /* 3D */
+let perguntaTemporaria = "";
 const toque3D = () => { ultimoToque3D = Date.now(); if (controls3D) controls3D.autoRotate = false; };
 function inicializarCena3D() {
   const c = $("canvas-3d");
@@ -349,7 +352,7 @@ function alternarWire() {
   grupoProjeto3D && grupoProjeto3D.traverse(n => { if (n.isMesh) n.material.wireframe = wire; });
 }
 
-/* CÉREBRO DA JADE (COM MODO DE ENSINO) */
+/* CÉREBRO DA JADE (COM FLUXO DE APRENDIZADO DO MESTRE) */
 function enviar() {
   const t = inputEl.value.trim(); if (!t) return;
   escrever(t, "user"); inputEl.value = "";
@@ -367,6 +370,33 @@ function calcular(t) {
 async function processarMensagemAvancada(t) {
   const tl = t.toLowerCase();
 
+  // 1. GERENCIAMENTO DO MODO DE ENSINO (O Mestre ensina algo novo)
+  if (estadoEnsino === 1) {
+    perguntaTemporaria = t.toLowerCase().replace(/[?.,!]/g, "").trim();
+    estadoEnsino = 2;
+    return jadeDiz("Entendido. Agora me diga: qual deve ser a resposta exata para essa pergunta?");
+  }
+  else if (estadoEnsino === 2) {
+    const respostaEnsino = t;
+    memoria.aprendizados[perguntaTemporaria] = respostaEnsino;
+    salvarMemoria();
+    estadoEnsino = 0;
+    return jadeDiz(`Aprendido, Mestre! A partir de agora, quando você me perguntar "${perguntaTemporaria}", eu responderei: "${respostaEnsino}".`);
+  }
+
+  // Ativar o modo de ensino
+  if (tl.includes("posso te ensinar") || tl.includes("quero te ensinar") || tl.includes("deixa te ensinar")) {
+    estadoEnsino = 1;
+    return jadeDiz("Estou pronta, Mestre! Qual é a <b>pergunta</b> que você quer me ensinar?");
+  }
+
+  // 2. VERIFICAR SE JÁ APRENDEU ISSO ANTES
+  const perguntaLimpa = tl.replace(/[?.,!]/g, "").trim();
+  if (memoria.aprendizados[perguntaLimpa]) {
+    return jadeDiz(memoria.aprendizados[perguntaLimpa]);
+  }
+
+  // Outros comandos normais
   if (/meu nome (?:e|é)\s+(.+)/i.test(t)) {
     const m = t.match(/meu nome (?:e|é)\s+(.+)/i);
     if (m && m[1]) {
@@ -382,33 +412,8 @@ async function processarMensagemAvancada(t) {
   }
 
   if (tl.includes("o que voce lembra")) {
-    return jadeDiz(`Lembro que seu nome é ${chamar()}, temos ${memoria.tarefas.length} tarefa(s) e ${memoria.projetos3D.length} projeto(s) 3D salvos.`);
-  }
-
-  if (tl.startsWith("nova tarefa:") || tl.startsWith("adicionar tarefa:")) {
-    const tarefa = t.split(":")[1]?.trim();
-    if (tarefa) {
-      memoria.tarefas.push({ texto: tarefa, concluida: false });
-      salvarMemoria();
-      return jadeDiz(`Tarefa adicionada: "${esc(tarefa)}".`);
-    }
-  }
-
-  // MODO DE ENSINO (O QUE APRENDER / ME ENSINA)
-  if (tl.includes("me ensina") || tl.includes("quero aprender") || tl.includes("o que devo aprender") || tl.includes("o que devo estudar")) {
-    if (tl.includes("godot")) {
-      return jadeDiz("Para dominar o Godot, Mestre, recomendo seguir esta ordem: 1. Entender a árvore de nós e cenas. 2. Praticar movimentação básica com GDScript. 3. Criar sistemas simples de colisão e menus. Quer que eu detalhe o passo um?");
-    }
-    if (tl.includes("roblox") || tl.includes("lua")) {
-      return jadeDiz("Para o Roblox Studio, o ideal é focar em: 1. Manipulação de partes e propriedades no Workspace. 2. Uso de RemoteEvents para cliente e servidor. 3. Criação de UIs e inventários. Quer focar em qual parte?");
-    }
-    if (tl.includes("arduino") || tl.includes("eletronica")) {
-      return jadeDiz("Para eletrônica com Arduino: 1. Entender resistores, LEDs e circuitos fechados na protoboard. 2. Ler entradas de botões com debounce. 3. Controlar motores PWM. Quer montar que tipo de circuito?");
-    }
-    if (tl.includes("html") || tl.includes("css") || tl.includes("web")) {
-      return jadeDiz("Para desenvolvimento web: 1. Estrutura básica com tags HTML semânticas. 2. Estilização moderna com Flexbox e Grid no CSS. 3. Interatividade e manipulação de DOM com JavaScript. Por onde quer começar?");
-    }
-    return jadeDiz("Ótima iniciativa de aprendizado, Mestre! Me diga exatamente qual assunto, ferramenta ou tecnologia você quer estudar para eu montar um guia sob medida.");
+    const qtdeAprendidos = Object.keys(memoria.aprendizados).length;
+    return jadeDiz(`Lembro que seu nome é ${chamar()}, temos ${memoria.tarefas.length} tarefa(s), ${memoria.projetos3D.length} projeto(s) 3D e ${qtdeAprendidos} lição(ões) ensinadas por você.`);
   }
 
   const calc = calcular(t);
@@ -416,7 +421,7 @@ async function processarMensagemAvancada(t) {
     return jadeDiz(`O resultado é ${calc}.`);
   }
 
-  return jadeDiz("Entendido, Mestre. Estou processando.");
+  return jadeDiz("Entendido, Mestre. Se quiser me ensinar sobre isso, diga 'posso te ensinar'.");
 }
 
 /* RECONHECIMENTO DE VOZ */
