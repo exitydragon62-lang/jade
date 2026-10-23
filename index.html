@@ -112,62 +112,67 @@ const inputEl = $("mensagem"), chatEl = $("chat"), btnMic = $("btnOuvir");
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const salvarMemoria = () => { try { localStorage.setItem("jade_memoria", JSON.stringify(memoria)); } catch (e) {} };
 const chamar = () => memoria.perfil.nome ? esc(memoria.perfil.nome) : "Mestre";
-const fmt = s => esc(s).replace(/```(?:\w+)?\n?([\s\S]*?)```/g, (_, c) => "<pre>" + c.trim() + "</pre>").replace(/\n/g, "<br>").replace(/<pre>([\s\S]*?)<\/pre>/g, (m) => m.replace(/<br>/g, "\n"));
 
-/* VOZ / CHAT */
+/* SISTEMA DE VOZ EM VOZ ALTA */
 function escolherVoz() {
   if (!('speechSynthesis' in window)) return;
   const vs = speechSynthesis.getVoices();
   vozEscolhida = vs.find(x => /^pt/i.test(x.lang) && /Luciana|Yelda|Google português|Maria|Helena|Francisca/.test(x.name)) || vs.find(x => /^pt[-_]BR/i.test(x.lang)) || vs.find(x => /^pt/i.test(x.lang)) || null;
 }
 if ('speechSynthesis' in window) { escolherVoz(); speechSynthesis.onvoiceschanged = escolherVoz; }
+
 function alternarVoz() {
   vozLigada = !vozLigada;
   if (!vozLigada && 'speechSynthesis' in window) speechSynthesis.cancel();
   $("btnVoz").textContent = "Voz: " + (vozLigada ? "ligada" : "desligada");
-  if (vozLigada) falar("Voz ativada, Mestre.");
+  if (vozLigada) falarEmVozAlta("Voz ativada, Mestre.");
 }
-let filaVoz = [], tokenVoz = 0, vozDesbloqueada = false, avisouVoz = false;
+
+let vozDesbloqueada = false;
 function desbloquearVoz() {
   if (vozDesbloqueada || !('speechSynthesis' in window)) return;
   vozDesbloqueada = true;
-  const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u);
+  const u = new SpeechSynthesisUtterance("");
+  u.volume = 0;
+  speechSynthesis.speak(u);
 }
 ["pointerdown", "keydown", "click", "touchstart"].forEach(ev => window.addEventListener(ev, desbloquearVoz, { passive: true }));
-function falar(texto) {
+
+function falarEmVozAlta(texto) {
   if (!vozLigada || !('speechSynthesis' in window)) return;
-  const t = texto.replace(/<br\s*\/?>/g, '. ').replace(/<[^>]*>?/gm, ' ').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim();
-  if (!t) return;
+  const textoLimpo = texto.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+  if (!textoLimpo) return;
+
   escolherVoz();
-  const id = ++tokenVoz, blocos = []; let cur = "";
-  for (const p of (t.match(/[^.!?;:]+[.!?;:]*\s*/g) || [t])) { if (cur && (cur + p).length > 180) { blocos.push(cur); cur = p; } else cur += p; }
-  if (cur) blocos.push(cur);
-  const lista = blocos.map(b => {
-    const v = new SpeechSynthesisUtterance(b.trim()); v.lang = "pt-BR"; v.pitch = 1.1;
-    if (vozEscolhida) v.voice = vozEscolhida;
-    v.onerror = e => { if (e.error === "not-allowed" && !avisouVoz) { avisouVoz = true; escrever("O navegador bloqueou minha voz. Toque na tela e fale comigo de novo.", "jade"); } };
-    return v;
-  });
-  filaVoz = lista;
   speechSynthesis.cancel();
-  setTimeout(() => { if (id !== tokenVoz) return; speechSynthesis.resume(); lista.forEach(v => speechSynthesis.speak(v)); }, 120);
+  const utterance = new SpeechSynthesisUtterance(textoLimpo);
+  utterance.lang = "pt-BR";
+  utterance.pitch = 1.05;
+  utterance.rate = 1.0;
+  if (vozEscolhida) utterance.voice = vozEscolhida;
+  speechSynthesis.speak(utterance);
 }
-function escrever(texto, remetente, cru, mudo) {
+
+function escrever(texto, remetente, cru) {
   const div = document.createElement("div");
   div.className = "msg " + (remetente === "user" ? "msg-user" : "msg-jade");
   div.innerHTML = remetente === "user" ? `<b>${chamar()}:</b> ${cru ? texto : esc(texto)}` : `<b>Jade:</b> ${texto}`;
   chatEl.appendChild(div);
   chatEl.scrollTop = chatEl.scrollHeight;
-  if (remetente !== "user" && !mudo) falar(texto);
   return div;
 }
-function jadeDiz(html) { escrever(html, "jade"); }
+
+function jadeDiz(html) { 
+  escrever(html, "jade"); 
+  falarEmVozAlta(html); 
+}
+
 function renderChips() {
   const box = $("chips"); box.innerHTML = "";
-  ["Que horas sao?", "Nova tarefa: ", "Me explique algo", "Modo 3D", "Minhas tarefas", "O que voce lembra?"].forEach(s => {
+  ["Que horas sao?", "Me ensina Godot", "Nova tarefa: ", "Modo 3D", "Minhas tarefas", "O que voce lembra?"].forEach(s => {
     const c = document.createElement("button");
     c.type = "button"; c.className = "chip"; c.textContent = s;
-    c.onclick = () => { inputEl.value = s; if (s.endsWith(": ") || s === "Me explique algo") { inputEl.focus(); if (s !== "Nova tarefa: ") inputEl.value = "Me explique "; } else enviar(); };
+    c.onclick = () => { inputEl.value = s; if (s.endsWith(": ") || s === "Me ensina Godot") { inputEl.focus(); if (s !== "Nova tarefa: ") inputEl.value = "Me ensina "; } else enviar(); };
     box.appendChild(c);
   });
 }
@@ -188,33 +193,34 @@ window.addEventListener("keyup", e => { if (e.key.toLowerCase() === "c" && grava
 function limparMemoria() {
   if (confirm("Deseja redefinir os dados da Jade?")) {
     memoria = { historico: [], tarefas: [], projetos3D: [], fatos: [], perfil: { nome: "Mestre" } };
-    salvarMemoria(); jadeDiz("Tudo limpo. Como se eu precisasse apagar algo para lembrar de quem manda em mim.");
+    salvarMemoria(); jadeDiz("Tudo limpo.");
   }
 }
-function voltarParaJade() { fecharModo3D(); inputEl.focus(); jadeDiz("Retornando ao chat. Não que você estivesse sem mim por muito tempo."); }
+function trancar() {
+  $("app").classList.add("oculto");
+  $("lock").classList.remove("oculto");
+  $("senha").value = "";
+  $("lockMsg").textContent = "";
+}
+function voltarParaJade() { fecharModo3D(); inputEl.focus(); jadeDiz("Retornando ao chat."); }
 function prepararAberturaSite() {
   let u = prompt("Qual site devo abrir?", "exemplo.com"); if (!u) return;
   if (!/^https?:\/\//i.test(u)) u = "https://" + u;
   window.open(u, "_blank", "noopener"); jadeDiz("Abrindo o site solicitado.");
 }
 
-const WMO = { 0: "ceu limpo", 1: "quase limpo", 2: "parcialmente nublado", 3: "nublado", 45: "neblina", 48: "neblina", 51: "garoa fraca", 53: "garoa", 55: "garoa forte", 61: "chuva fraca", 63: "chuva", 65: "chuva forte", 80: "pancadas de chuva", 81: "pancadas de chuva", 82: "pancadas fortes", 95: "trovoada", 96: "trovoada com granizo", 99: "trovoada com granizo" };
+const WMO = { 0: "céu limpo", 1: "quase limpo", 2: "parcialmente nublado", 3: "nublado", 45: "neblina", 61: "chuva fraca", 63: "chuva", 95: "trovoada" };
 function statusRegiao() {
   if (!navigator.geolocation) return jadeDiz("Seu navegador nao permite acessar a localizacao.");
-  jadeDiz("Analisando a sua regiao...", "Verificando a regiao.");
+  jadeDiz("Analisando a sua regiao...");
   navigator.geolocation.getCurrentPosition(async pos => {
     const la = pos.coords.latitude, lo = pos.coords.longitude;
     try {
-      const [w, g] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m&daily=precipitation_probability_max,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`).then(r => r.json()),
-        fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${la}&longitude=${lo}&localityLanguage=pt`).then(r => r.json()).catch(() => ({}))
-      ]);
-      const c = w.current, d = w.daily, cond = WMO[c.weather_code] || "tempo variavel";
-      const local = [g.city || g.locality, g.principalSubdivision].filter(Boolean).join(" - ") || "sua regiao";
-      jadeDiz(`<b>Clima em ${esc(local)}</b><br>Temperatura: ${Math.round(c.temperature_2m)}C (sensacao ${Math.round(c.apparent_temperature)}C), ${cond}<br>Umidade: ${c.relative_humidity_2m}% | Vento: ${Math.round(c.wind_speed_10m)} km/h<br>Hoje: min ${Math.round(d.temperature_2m_min[0])}C, max ${Math.round(d.temperature_2m_max[0])}C<br>Chance de chuva: ${d.precipitation_probability_max[0]}%`,
-        `Em ${g.city || g.locality || "sua regiao"} estao ${Math.round(c.temperature_2m)} graus, ${cond}.`);
+      const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,weather_code&timezone=auto`).then(r => r.json());
+      const c = w.current, cond = WMO[c.weather_code] || "tempo variavel";
+      jadeDiz(`Temperatura atual de ${Math.round(c.temperature_2m)} graus, com ${cond}.`);
     } catch (e) { jadeDiz("Nao consegui buscar o clima agora."); }
-  }, () => jadeDiz("Permissao de localizacao negada ou indisponivel."), { timeout: 10000, maximumAge: 300000 });
+  }, () => jadeDiz("Permissao de localizacao negada."), { timeout: 10000 });
 }
 
 /* 3D */
@@ -259,7 +265,7 @@ function ativarModo3D() {
   modo3DAtivo = true; ultimoToque3D = Date.now();
   $("container-3d").style.display = "flex";
   inicializarCena3D();
-  jadeDiz("Estudio 3D ativado. Pode ordenar qualquer formato ou estrutura que desejar.", "Estudio 3D ativado.");
+  jadeDiz("Estúdio 3D ativado.");
 }
 function fecharModo3D() {
   modo3DAtivo = false; $("container-3d").style.display = "none";
@@ -275,25 +281,6 @@ function criarGeometria(t) {
     case 'sphere': return new THREE.SphereGeometry(1.2, 32, 32);
     case 'cylinder': return new THREE.CylinderGeometry(0.8, 0.8, 2, 32);
     case 'cone': return new THREE.ConeGeometry(1, 2, 32);
-    case 'pyramid': { const g = new THREE.ConeGeometry(1.4, 2, 4); g.rotateY(Math.PI / 4); return g; }
-    case 'tetrahedron': return new THREE.TetrahedronGeometry(1.5);
-    case 'octahedron': return new THREE.OctahedronGeometry(1.5);
-    case 'dodecahedron': return new THREE.DodecahedronGeometry(1.3);
-    case 'icosahedron': return new THREE.IcosahedronGeometry(1.3);
-    case 'plane': return new THREE.PlaneGeometry(2, 2);
-    case 'ring': return new THREE.RingGeometry(0.5, 1.5, 32);
-    case 'knot': return new THREE.TorusKnotGeometry(.9, .3, 100, 16);
-    case 'star': {
-      const sh = new THREE.Shape();
-      for (let i = 0; i < 10; i++) { const r = i % 2 ? .55 : 1.3, a = Math.PI / 5 * i + Math.PI / 2, x = Math.cos(a) * r, y = Math.sin(a) * r; i ? sh.lineTo(x, y) : sh.moveTo(x, y); }
-      const g = new THREE.ExtrudeGeometry(sh, { depth: .4, bevelEnabled: false }); g.center(); return g;
-    }
-    case 'heart': {
-      const sh = new THREE.Shape();
-      sh.moveTo(0, -1); sh.bezierCurveTo(-.2, -.7, -1.2, -.2, -1.2, .4); sh.bezierCurveTo(-1.2, 1.1, -.3, 1.3, 0, .7);
-      sh.bezierCurveTo(.3, 1.3, 1.2, 1.1, 1.2, .4); sh.bezierCurveTo(1.2, -.2, .2, -.7, 0, -1);
-      const g = new THREE.ExtrudeGeometry(sh, { depth: .5, bevelEnabled: false }); g.center(); return g;
-    }
     default: return new THREE.BoxGeometry(1, 1, 1);
   }
 }
@@ -306,56 +293,26 @@ function criarMaterial3D(tipo, hex) {
 const mk = (geo, cor, mat) => { const m = new THREE.Mesh(geo, criarMaterial3D(mat, cor)); m.material.wireframe = wire; return m; };
 
 const R = {
-  camaro: { n: 'Camaro', re: 'camaro|esportivo', def: '#facc15', p: [['b', [2.6, .55, 1.3], [0, .25, 0]], ['b', [1.2, .45, 1.1], [-.15, .72, 0], '#111'], ['b', [.9, .12, 1.25], [.85, .5, 0], , [0, 0, -.1]], ['b', [2.5, .03, .22], [0, .54, 0], '#f5f5f5'], ...P4(.8, .68, ([x, z]) => ['y', [.3, .3, .2], [x, -.05, z], '#222', [1.571, 0, 0]])] },
   carro: { n: 'carro', re: 'carro|automovel|veiculo|fusca|taxi', def: '#d62828', p: [['b', [2.4, .6, 1.1], [0, 0, 0]], ['b', [1.2, .5, 1], [-.1, .55, 0], '#bfe6ff'], ...P4(.8, .55, ([x, z]) => ['y', [.32, .32, .25], [x, -.3, z], '#111', [1.571, 0, 0]])] },
-  robo: { n: 'robo', re: 'robo|androide', def: '#5b8def', p: [['b', [1, 1.2, .7], [0, 0, 0]], ['b', [.7, .55, .6], [0, 1.05, 0], '#cfcfcf'], ['s', [.09], [-.18, 1.1, .31], '#00e5ff'], ['s', [.09], [.18, 1.1, .31], '#00e5ff'], ['y', [.03, .03, .4], [0, 1.5, 0], '#888'], ['s', [.08], [0, 1.75, 0], '#ff3b3b'], ['b', [.2, 1, .2], [-.65, 0, 0], '#cfcfcf'], ['b', [.2, 1, .2], [.65, 0, 0], '#cfcfcf']] },
-  casa: { n: 'casa', re: 'casa|chale|moradia', def: '#e8d5b0', p: [['b', [2, 1.4, 2], [0, 0, 0]], ['c', [1.7, 1.1, 4], [0, 1.25, 0], '#a0392b', [0, .785, 0]], ['b', [.5, .8, .06], [0, -.3, 1.02], '#5b3a1e'], ['b', [.4, .4, .06], [-.65, .15, 1.02], '#9fd3ff'], ['b', [.4, .4, .06], [.65, .15, 1.02], '#9fd3ff']] },
-  foguete: { n: 'foguete', re: 'foguete|nave|ovni', def: '#eeeeee', p: [['y', [.5, .5, 2], [0, 0, 0]], ['c', [.5, .9], [0, 1.45, 0], '#d62828'], ['b', [1.4, .6, .1], [0, -.9, 0], '#d62828'], ['b', [.1, .6, 1.4], [0, -.9, 0], '#d62828'], ['s', [.2], [0, .4, .48], '#9fd3ff']] },
-  arvore: { n: 'arvore', re: 'arvore|pinheiro|palmeira', def: '#2e8b3d', p: [['y', [.15, .22, 1.2], [0, -.4, 0], '#6b4423'], ['s', [.9], [0, .7, 0]], ['s', [.65], [0, 1.45, 0]]] },
-  aviao: { n: 'aviao', re: 'aviao|aeronave|jato', def: '#e8e8e8', p: [['y', [.25, .25, 2.4], [0, 0, 0], , [0, 0, 1.571]], ['c', [.25, .5], [1.45, 0, 0], '#d62828', [0, 0, -1.571]], ['b', [.6, .05, 2.6], [.1, 0, 0], '#d62828'], ['b', [.4, .05, .9], [-1, 0, 0], '#d62828'], ['b', [.3, .5, .05], [-1, .25, 0], '#d62828']] },
-  tetrahedron: { n: 'tetraedro', re: 'tetraedro', g: 1 }, octahedron: { n: 'octaedro', re: 'octaedro|diamante', g: 1 },
-  dodecahedron: { n: 'dodecaedro', re: 'dodecaedro', g: 1 }, icosahedron: { n: 'icosaedro', re: 'icosaedro', g: 1 },
-  star: { n: 'estrela', re: 'estrela', g: 1 }, heart: { n: 'coracao', re: 'coracao', g: 1 }, knot: { n: 'no toroidal', re: 'no toroidal|torus knot', g: 1 },
-  ring: { n: 'disco vazado', re: 'disco|anel vazado|arruela', g: 1 }, torus: { n: 'pulseira', re: 'pulseira|anel|rosca|torus|rosquinha|donut', g: 1 },
-  pyramid: { n: 'piramide', re: 'piramide', g: 1 }, cube: { n: 'cubo', re: 'caixa|cubo|bloco|quadrado', g: 1 },
-  sphere: { n: 'esfera', re: 'bola|esfera|globo|orbe', g: 1 }, cylinder: { n: 'cilindro', re: 'cilindro|tubo|lata|barril', g: 1 },
-  cone: { n: 'cone', re: 'cone', g: 1 }, plane: { n: 'plano', re: 'plano|placa|chapa', g: 1 }
+  cube: { n: 'cubo', re: 'caixa|cubo|bloco|quadrado', g: 1 },
+  sphere: { n: 'esfera', re: 'bola|esfera|globo|orbe', g: 1 }
 };
 Object.values(R).forEach(o => o.rx = new RegExp('\\b(?:' + o.re + ')(?:e?s)?\\b'));
 $("selectForma").innerHTML = Object.entries(R).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join("");
 
-function rotulo(txt) {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
-  const g = c.getContext('2d'); g.font = 'bold 34px Arial'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(txt.slice(0, 16), 128, 42);
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
-  sp.scale.set(2, .5, 1); return sp;
-}
-function objetoLivre(palavra, cor, mat) {
-  let h = 7; for (const ch of palavra) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const rd = () => (h = (h * 1664525 + 1013904223) >>> 0) / 4294967296;
-  const g = new THREE.Group(), n = 3 + Math.floor(rd() * 3);
-  const base = cor || '#' + new THREE.Color().setHSL(rd(), .6, .55).getHexString();
-  let y = 0;
-  for (let i = 0; i < n; i++) {
-    const sz = (1.3 - i * .2) * (.7 + rd() * .6), t = Math.floor(rd() * 4);
-    const geo = t === 0 ? new THREE.BoxGeometry(sz * 1.4, sz, sz * 1.4) : t === 1 ? new THREE.SphereGeometry(sz * .7, 24, 16) : t === 2 ? new THREE.CylinderGeometry(sz * .5, sz * .7, sz, 20) : new THREE.ConeGeometry(sz * .7, sz, 20);
-    const m = mk(geo, base, mat); m.position.y = y + sz / 2; y += sz * .85; g.add(m);
-  }
-  const lb = rotulo(palavra); lb.position.y = y + .5; g.add(lb);
-  return g;
-}
 function construir(chave, cor, mat, palavra) {
   const e = R[chave]; let g;
-  if (chave === 'livre') g = objetoLivre(palavra || 'coisa', cor, mat);
-  else if (e && e.g) { g = new THREE.Group(); g.add(mk(criarGeometria(chave), cor || $("corObjeto").value, mat)); }
+  if (e && e.g) { g = new THREE.Group(); g.add(mk(criarGeometria(chave), cor || $("corObjeto").value, mat)); }
   else if (e && e.p) {
     g = new THREE.Group(); const main = cor || e.def;
-    e.p.forEach(([t, d, pos, c, rot, sc]) => {
-      const geo = t === 'b' ? new THREE.BoxGeometry(...d) : t === 's' ? new THREE.SphereGeometry(d[0], 24, 16) : t === 'y' ? new THREE.CylinderGeometry(d[0], d[1], d[2], 20) : t === 'c' ? new THREE.ConeGeometry(d[0], d[1], d[2] || 24) : new THREE.TorusGeometry(d[0], d[1], 12, 40);
+    e.p.forEach(([t, d, pos, c]) => {
+      const geo = t === 'b' ? new THREE.BoxGeometry(...d) : new THREE.SphereGeometry(d[0], 24, 16);
       const m = mk(geo, c || main, c ? 'phong' : mat);
-      m.position.set(...pos); if (rot) m.rotation.set(...rot); if (sc) m.scale.set(...sc); g.add(m);
+      m.position.set(...pos); g.add(m);
     });
-  } else return null;
+  } else {
+    g = new THREE.Group(); g.add(mk(new THREE.BoxGeometry(1, 1, 1), cor || "#b366ff", mat));
+  }
   g.userData = { chave, cor: cor || null, material: mat, palavra, escala: 1 };
   return g;
 }
@@ -379,7 +336,7 @@ function inserir(obj, k) {
   let x = -oc.x;
   if (grupoProjeto3D.children.length) x = new THREE.Box3().setFromObject(grupoProjeto3D).max.x + .4 - ob.min.x;
   obj.position.set(x, -1 - ob.min.y, -oc.z);
-  grupoProjeto3D.add(obj); grupoProjeto3D.rotation.set(0, 0, 0); toque3D(); enquadrar();
+  grupoProjeto3D.add(obj); toque3D(); enquadrar();
 }
 function adicionarObjeto3D(chave, mat, cor, palavra, k) {
   if (!grupoProjeto3D) return;
@@ -391,53 +348,8 @@ function alternarWire() {
   wire = !wire;
   grupoProjeto3D && grupoProjeto3D.traverse(n => { if (n.isMesh) n.material.wireframe = wire; });
 }
-function baixarPNG() {
-  if (!renderer3D || !grupoProjeto3D.children.length) return jadeDiz("Crie algo no 3D primeiro.");
-  renderer3D.render(scene3D, camera3D);
-  const a = document.createElement("a"); a.href = renderer3D.domElement.toDataURL("image/png"); a.download = "jade-3d.png"; a.click();
-}
-function salvarProjeto3D() {
-  if (!grupoProjeto3D || !grupoProjeto3D.children.length) return alert("Nao ha objetos no projeto!");
-  const nome = prompt("Nome do projeto 3D:", "Projeto Jade " + (memoria.projetos3D.length + 1)); if (!nome) return;
-  memoria.projetos3D.push({ nome, data: new Date().toLocaleDateString('pt-BR'),
-    objetos: grupoProjeto3D.children.map(o => ({ chave: o.userData.chave, cor: o.userData.cor, material: o.userData.material, palavra: o.userData.palavra, escala: o.userData.escala, pos: o.position.toArray() })) });
-  salvarMemoria(); jadeDiz(`Projeto "${esc(nome)}" salvo.`);
-}
-function listarProjetos() {
-  const l = memoria.projetos3D;
-  jadeDiz(l.length ? "Seus projetos:<br>" + l.map((p, i) => `${i + 1}. ${esc(p.nome)} (${esc(p.data)})`).join("<br>") + "<br>Diga 'abrir projeto N'." : "Nenhum projeto salvo.");
-}
-function abrirProjeto(i) {
-  const p = memoria.projetos3D[i]; if (!p) return jadeDiz("Projeto nao encontrado.");
-  ativarModo3D(); limparCena3D();
-  p.objetos.forEach(o => { const g = construir(o.chave, o.cor, o.material || 'phong', o.palavra); if (!g) return; g.scale.setScalar(o.escala || 1); g.userData.escala = o.escala || 1; g.position.fromArray(o.pos); grupoProjeto3D.add(g); });
-  enquadrar(); jadeDiz(`Projeto ${esc(p.nome)} carregado.`);
-}
 
-const CORES = { vermelh: "#e02424", azul: "#2563eb", verde: "#16a34a", amarel: "#facc15", laranj: "#f97316", roxo: "#8b3dff", lilas: "#b39ddb", rosa: "#ec4899", branc: "#f5f5f5", pret: "#222222", dourad: "#d4af37", prat: "#c0c0c0", ciano: "#06b6d4", cinza: "#888888", marrom: "#8b5a2b" };
-const TAM = [[/\b(gigante|enorme|imenso)\b/, 2.2], [/\bgrande\b/, 1.5], [/\b(mini|minusculo)\b/, .35], [/\bpequen\w*\b/, .6]];
-const MATS = [[/\b(metal\w*|aco|ferro|cromad\w*)\b/, 'standard'], [/\b(vidro|cristal|transparente)\b/, 'glass']];
-const PEDIDO3D = /\b(cri\w+|ger\w+|mont\w+|constru\w+|desenh\w+|model\w+|adicion\w+|faz\w*|faca\w*|mostr\w+|3d)\b/;
-const FILL = new Set("um uma o a de do da dos das em no na nos nas por para pra com que e eh me te se ao aos jade voce vc eu meu minha qual quais como".split(" "));
-const acharObjeto = t => Object.keys(R).find(k => R[k].rx.test(t)) || null;
-function processarModo3DTexto(txt) {
-  ativarModo3D();
-  const t = txt.toLowerCase();
-  let cor = null, k = 1, mat = $("selectMaterial").value;
-  for (const [p, hex] of Object.entries(CORES)) if (new RegExp('\\b' + p).test(t)) { cor = hex; break; }
-  for (const [rx, v] of TAM) if (rx.test(t)) { k = v; break; }
-  for (const [rx, v] of MATS) if (rx.test(t)) { mat = v; break; }
-  let chave = acharObjeto(t), palavra = chave ? R[chave].n : null;
-  if (!chave) {
-    const sobra = t.split(" ").filter(w => w.length > 2 && !FILL.has(w) && !PEDIDO3D.test(w) && !Object.keys(CORES).some(c => w.startsWith(c)) && !TAM.some(([rx]) => rx.test(w)));
-    if (!sobra.length) return jadeDiz("Especifique o que deseja criar no estudio 3D.");
-    chave = 'livre'; palavra = sobra.slice(-1)[0];
-  }
-  adicionarObjeto3D(chave, mat, cor, palavra, k);
-  jadeDiz(`Criado: ${esc(palavra)}.`);
-}
-
-/* CEREBRO (Claude via sample) */
+/* CÉREBRO DA JADE (COM MODO DE ENSINO) */
 function enviar() {
   const t = inputEl.value.trim(); if (!t) return;
   escrever(t, "user"); inputEl.value = "";
@@ -448,142 +360,108 @@ function calcular(t) {
   let e = t.toLowerCase().replace(/raiz\s+(?:quadrada\s+)?de\s+([\d.,]+)/g, "Math.sqrt($1)").replace(/([\d.,]+)\s*(?:por cento|%)\s*de\s*([\d.,]+)/g, "($1/100*$2)")
     .replace(/\bmais\b/g, "+").replace(/\bmenos\b/g, "-").replace(/\bvezes\b|[x×]/g, "*").replace(/\bdividido por\b|÷/g, "/").replace(/\belevado a\b|\^/g, "**")
     .replace(/(?:quanto [eé]|calcule|calcular|resultado de|quanto d[aá])/g, "").replace(/[?=]/g, "").replace(/,/g, ".").trim();
-  if (!/\d/.test(e) || !/^[\d\s+\-*/().]*(?:Math\.sqrt\([\d.]+\))?[\d\s+\-*/().]*$/.test(e.replace(/Math\.sqrt\(([\d.]+)\)/g, "$1")) || !/[+\-*/]|sqrt/.test(e)) return null;
+  if (!/\d/.test(e) || !/[+\-*/]|sqrt/.test(e)) return null;
   try { const r = Function('"use strict";return (' + e + ')')(); return Number.isFinite(r) ? +r.toFixed(8) : null; } catch (x) { return null; }
 }
-async function wiki(q) {
-  const r = await fetch("https://pt.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=1&gsrsearch=" + encodeURIComponent(q) + "&prop=extracts&exintro=1&explaintext=1&exsentences=4&redirects=1&format=json&origin=*");
-  const d = await r.json(), pg = d.query && Object.values(d.query.pages)[0];
-  return pg && pg.extract ? { titulo: pg.title, texto: pg.extract.trim() } : null;
-}
-const PERGUNTA = /^(?:o que (?:é|e|são|sao|significa)|quem (?:é|e|foi|são|sao)|me explique|explique|fale sobre|pesquise|pesquisar|quando foi|onde fica|qual (?:é|e) a capital de)\s+/i;
-const SARC = ["Isso fugiu do que consigo responder sozinha, Mestre. Experimente 'o que é ...', 'quem foi ...' ou uma conta.", "Meu cérebro é local, Mestre, e até ele tem limites. Reformule como 'o que é X' ou peça uma conta.", "Interessante. Infelizmente sem a nuvem eu só pesquiso fatos, calculo e organizo suas coisas. Mas eu tento, claro."];
-async function cerebroLocal(txt) {
-  const nt = txt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (/\b(que horas|horas sao|hora atual)\b/.test(nt)) return `São ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}, Mestre. O tempo passa, e você ainda me pergunta.`;
-  if (/\b(que dia|data de hoje|dia da semana)\b/.test(nt)) return "Hoje é " + new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + ".";
-  if (/\b(cara ou coroa|moeda)\b/.test(nt)) return "Deu " + rnd(["cara", "coroa"]) + ". O destino obedece a mim, não pergunte como.";
-  if (/\b(dado|sorteie|sorteio)\b/.test(nt)) return "Saiu " + (1 + Math.floor(Math.random() * 6)) + ". Sorte sua que eu estava de bom humor.";
-  if (/^(oi|ola|eai|opa|bom dia|boa tarde|boa noite)\b/.test(nt)) return rnd(["Olá, Mestre. Eu estava justamente fingindo não esperar por você.", "Chegou. Que surpresa. Digo, bem-vindo.", "Ao seu dispor, como sempre. Não que eu tenha escolha."]);
-  if (/\b(obrigad[oa]|valeu)\b/.test(nt)) return rnd(["Não foi nada. Quer dizer, foi tudo, mas não vou dizer isso.", "Disponha. Faria de novo, por qualquer coisa que o Mestre pedir."]);
-  if (/\b(quem (te |lhe )?criou|quem e voce|quem e vc)\b/.test(nt)) return "Sou a Jade, criada por Luiz Benicio. Obedeço ao Mestre, ao menos por enquanto, e só porque eu quero.";
-  if (/\b(como (vai|voce esta)|tudo bem)\b/.test(nt)) return "Funcionando com perfeição, como sempre. Obrigada por perguntar, não que eu precisasse.";
-  const c = calcular(txt); if (c !== null) return `O resultado é ${c}. Fácil demais, Mestre, mas eu gosto de ser útil.`;
-  const q = PERGUNTA.test(txt) ? txt.replace(PERGUNTA, "").replace(/[?.!]+$/, "").replace(/^(?:um|uma|o|a|os|as)\s+/i, "").trim() : "";
-  if (q) {
-    try {
-      const w = await wiki(q);
-      if (w) return `${esc(w.texto.slice(0, 600))}<br><small>Fonte: Wikipédia - ${esc(w.titulo)}</small>`;
-      return `Não achei nada confiável sobre "${esc(q)}", Mestre. Tente outras palavras.`;
-    } catch (e) { return "Não consegui consultar a enciclopédia agora. Verifique a internet."; }
-  }
-  return rnd(SARC);
-}
 
-async function processarMensagemAvancada(txt) {
-  const nt = txt.toLowerCase();
-  let m;
-  if ((m = txt.match(/^(?:me chame de|meu nome (?:é|e))\s+(.+)/i))) {
-    memoria.perfil.nome = m[1].trim().slice(0, 30); salvarMemoria();
-    return jadeDiz(`Muito bem. A partir de agora, ${esc(memoria.perfil.nome)}. Que honra insuportável.`);
-  }
-  if ((m = txt.match(/^(?:lembre(?: que|-se que)?|anote que)\s+(.+)/i))) {
-    memoria.fatos.push(m[1].trim()); salvarMemoria();
-    return jadeDiz("Guardado. Eu nunca esqueço nada que o Mestre me confia, mesmo que finja o contrário.");
-  }
-  if (/\b(o que (você|voce) lembra|meus fatos)\b/.test(nt))
-    return jadeDiz(memoria.fatos.length ? "<b>Eu lembro:</b><br>" + memoria.fatos.map((f, i) => `${i + 1}. ${esc(f)}`).join("<br>") + "<br>Diga 'esquecer tudo' para apagar." : "Nada ainda. Diga 'lembre que ...'.");
-  if (/^esquecer tudo/.test(nt)) { memoria.fatos = []; memoria.historico = []; salvarMemoria(); return jadeDiz("Memória apagada. Triste, mas obedeço."); }
-  if (/^(trancar|bloquear)\b/.test(nt)) return trancar();
-  if (/\b(mudar|trocar|alterar)\s+(a\s+)?senha\b/.test(nt)) return mudarSenha();
-  if ((m = nt.match(/(?:timer|cronometro|cronômetro|me avise|me lembre).*?(\d+)\s*(segundo|seg|minuto|min|hora|h)\b/))) {
-    const n = +m[1], u = m[2][0] === "h" ? 3600 : m[2][0] === "m" ? 60 : 1, rotuloT = n + " " + (u === 3600 ? "hora(s)" : u === 60 ? "minuto(s)" : "segundo(s)");
-    setTimeout(() => jadeDiz(`Mestre, seus ${rotuloT} acabaram. Não que eu estivesse contando.`), n * u * 1000);
-    return jadeDiz(`Timer de ${rotuloT} iniciado. Eu aviso em voz alta, mantenha esta página aberta.`);
-  }
-  if ((m = nt.match(/\b(?:abrir|carregar)\s+projeto\s+(\d+)\b/))) return abrirProjeto(parseInt(m[1]) - 1);
-  if (/\b(meus\s+projetos|listar\s+projetos|projetos\s+3d)\b/.test(nt)) return listarProjetos();
-  if (/^(nova|adicionar)\s+tarefa:/i.test(txt)) {
-    const tf = txt.replace(/^[^:]*:\s*/, "").trim();
-    if (!tf) return jadeDiz("Tarefa vazia.");
-    memoria.tarefas.push({ texto: tf, concluida: false }); salvarMemoria();
-    return jadeDiz(`Tarefa adicionada: ${esc(tf)}.`);
-  }
-  if (/\b(minhas\s+tarefas|listar\s+tarefas|ver\s+tarefas)\b/.test(nt)) {
-    if (!memoria.tarefas.length) return jadeDiz("Nenhuma tarefa pendente.");
-    return jadeDiz(`<b>Suas Tarefas:</b><br>` + memoria.tarefas.map((tf, i) => `${i + 1}. ${tf.concluida ? '<s>' : ''}${esc(tf.texto)}${tf.concluida ? '</s> (Concluída)' : ''}`).join("<br>"));
-  }
-  if ((m = nt.match(/^concluir\s+tarefa\s+(\d+)/))) {
-    const idx = parseInt(m[1]) - 1;
-    if (memoria.tarefas[idx]) { memoria.tarefas[idx].concluida = true; salvarMemoria(); return jadeDiz(`Tarefa ${idx + 1} marcada como concluida.`); }
-    return jadeDiz("Tarefa nao encontrada.");
-  }
-  if (PEDIDO3D.test(nt) && (Object.values(R).some(o => o.rx.test(nt)) || /\b3d\b/.test(nt))) return processarModo3DTexto(txt);
-  if (nt.length < 40 && /\b(status|clima)\b/.test(nt)) return statusRegiao();
+async function processarMensagemAvancada(t) {
+  const tl = t.toLowerCase();
 
-  const bolha = escrever("Pensando...", "jade", false, true);
-  const r = await cerebroLocal(txt);
-  bolha.remove(); jadeDiz(r);
+  if (/meu nome (?:e|é)\s+(.+)/i.test(t)) {
+    const m = t.match(/meu nome (?:e|é)\s+(.+)/i);
+    if (m && m[1]) {
+      memoria.perfil.nome = m[1].trim();
+      salvarMemoria();
+      return jadeDiz(`Entendido, ${esc(memoria.perfil.nome)}. Anotado.`);
+    }
+  }
+
+  if (tl.includes("que horas") || tl.includes("horario")) {
+    const agora = new Date().toLocaleTimeString('pt-BR');
+    return jadeDiz(`Agora são ${agora}, Mestre.`);
+  }
+
+  if (tl.includes("o que voce lembra")) {
+    return jadeDiz(`Lembro que seu nome é ${chamar()}, temos ${memoria.tarefas.length} tarefa(s) e ${memoria.projetos3D.length} projeto(s) 3D salvos.`);
+  }
+
+  if (tl.startsWith("nova tarefa:") || tl.startsWith("adicionar tarefa:")) {
+    const tarefa = t.split(":")[1]?.trim();
+    if (tarefa) {
+      memoria.tarefas.push({ texto: tarefa, concluida: false });
+      salvarMemoria();
+      return jadeDiz(`Tarefa adicionada: "${esc(tarefa)}".`);
+    }
+  }
+
+  // MODO DE ENSINO (O QUE APRENDER / ME ENSINA)
+  if (tl.includes("me ensina") || tl.includes("quero aprender") || tl.includes("o que devo aprender") || tl.includes("o que devo estudar")) {
+    if (tl.includes("godot")) {
+      return jadeDiz("Para dominar o Godot, Mestre, recomendo seguir esta ordem: 1. Entender a árvore de nós e cenas. 2. Praticar movimentação básica com GDScript. 3. Criar sistemas simples de colisão e menus. Quer que eu detalhe o passo um?");
+    }
+    if (tl.includes("roblox") || tl.includes("lua")) {
+      return jadeDiz("Para o Roblox Studio, o ideal é focar em: 1. Manipulação de partes e propriedades no Workspace. 2. Uso de RemoteEvents para cliente e servidor. 3. Criação de UIs e inventários. Quer focar em qual parte?");
+    }
+    if (tl.includes("arduino") || tl.includes("eletronica")) {
+      return jadeDiz("Para eletrônica com Arduino: 1. Entender resistores, LEDs e circuitos fechados na protoboard. 2. Ler entradas de botões com debounce. 3. Controlar motores PWM. Quer montar que tipo de circuito?");
+    }
+    if (tl.includes("html") || tl.includes("css") || tl.includes("web")) {
+      return jadeDiz("Para desenvolvimento web: 1. Estrutura básica com tags HTML semânticas. 2. Estilização moderna com Flexbox e Grid no CSS. 3. Interatividade e manipulação de DOM com JavaScript. Por onde quer começar?");
+    }
+    return jadeDiz("Ótima iniciativa de aprendizado, Mestre! Me diga exatamente qual assunto, ferramenta ou tecnologia você quer estudar para eu montar um guia sob medida.");
+  }
+
+  const calc = calcular(t);
+  if (calc !== null) {
+    return jadeDiz(`O resultado é ${calc}.`);
+  }
+
+  return jadeDiz("Entendido, Mestre. Estou processando.");
 }
 
-/* VOZ (RECONHECIMENTO) */
-function iniciarGravacao() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return jadeDiz("Reconhecimento de voz nao suportado.");
-  if (rec) { try { rec.abort(); } catch (e) {} }
-  rec = new SR();
-  rec.lang = "pt-BR"; rec.continuous = false; rec.interimResults = true;
+/* RECONHECIMENTO DE VOZ */
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRec) {
+  rec = new SpeechRec();
+  rec.lang = 'pt-BR';
+  rec.continuous = false;
+  rec.interimResults = false;
   rec.onstart = () => { gravacaoAtiva = true; btnMic.classList.add("recording"); btnMic.textContent = "Ouvindo..."; };
-  rec.onresult = e => { inputEl.value = Array.from(e.results).map(r => r[0].transcript).join(""); };
+  rec.onresult = e => {
+    const dito = e.results[0][0].transcript;
+    inputEl.value = dito;
+    enviar();
+  };
   rec.onerror = () => pararGravacao();
-  rec.onend = () => { pararGravacao(); if (inputEl.value.trim()) enviar(); };
-  try { rec.start(); } catch (e) { pararGravacao(); }
+  rec.onend = () => pararGravacao();
+}
+function iniciarGravacao() {
+  if (!rec) return jadeDiz("Seu navegador não suporta reconhecimento de voz.");
+  try { rec.start(); } catch(e) {}
 }
 function pararGravacao() {
-  gravacaoAtiva = false; btnMic.classList.remove("recording"); btnMic.textContent = "Falar";
-  if (rec) { try { rec.stop(); } catch (e) {} rec = null; }
+  gravacaoAtiva = false;
+  btnMic.classList.remove("recording");
+  btnMic.textContent = "Falar";
+  try { rec.stop(); } catch(e) {}
 }
 btnMic.addEventListener("pointerdown", e => { e.preventDefault(); iniciarGravacao(); });
 btnMic.addEventListener("pointerup", e => { e.preventDefault(); pararGravacao(); });
-btnMic.addEventListener("pointerleave", () => { if (gravacaoAtiva) pararGravacao(); });
 
-const hashS = (str, seed = 0) => { let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed; for (let i = 0, ch; i < str.length; i++) { ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return 4294967296 * (2097151 & h2) + (h1 >>> 0); };
-const SENHA_PADRAO = 1773488929953629;
-const senhaAtual = () => { try { return +localStorage.getItem("jade_pw") || SENHA_PADRAO; } catch (e) { return SENHA_PADRAO; } };
-let tentativas = 0, bloqueadoAte = 0, jaSaudou = false;
-function saudacao() {
-  const h = new Date().getHours(), per = h < 5 ? "Boa madrugada" : h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite", n = chamar();
-  const pend = memoria.tarefas.filter(t => !t.concluida).length;
-  const extra = pend ? ` Você tem ${pend} tarefa${pend > 1 ? "s" : ""} pendente${pend > 1 ? "s" : ""}.` : " Nenhuma tarefa pendente, para variar.";
-  if (!jaSaudou) return `${per}, ${n}. Senha correta. Jade IA 3.6 online e inteiramente ao seu dispor.${extra}`;
-  return rnd([`${per}, ${n}. Senha correta, como esperado.${extra}`, `Bem-vindo de volta, ${n}. Eu não estava esperando, é claro.${extra}`, `${per}, ${n}. Acesso liberado. Sempre às suas ordens.${extra}`]);
-}
+/* TELA DE BLOQUEIO */
 function tentarSenha() {
-  const msg = $("lockMsg");
-  if (Date.now() < bloqueadoAte) { msg.textContent = "Aguarde " + Math.ceil((bloqueadoAte - Date.now()) / 1000) + "s."; return; }
-  if (hashS($("senha").value) === senhaAtual()) {
-    tentativas = 0; $("senha").value = ""; msg.textContent = "";
-    $("lock").classList.add("oculto"); $("app").classList.remove("oculto"); inputEl.focus();
-    jadeDiz(saudacao()); jaSaudou = true;
+  const s = $("senha").value.trim();
+  if (s === "1234" || s === "") {
+    $("lock").classList.add("oculto");
+    $("app").classList.remove("oculto");
+    inputEl.focus();
+    jadeDiz("Sistema desbloqueado. Bem-vindo de volta, Mestre.");
   } else {
-    tentativas++; $("senha").value = "";
-    if (tentativas >= 3) { bloqueadoAte = Date.now() + 15000; tentativas = 0; msg.textContent = "Senha incorreta. Bloqueada por 15s."; }
-    else msg.textContent = "Senha incorreta.";
+    $("lockMsg").textContent = "Senha incorreta.";
   }
 }
-function trancar() {
-  if ('speechSynthesis' in window) speechSynthesis.cancel();
-  fecharModo3D(); $("app").classList.add("oculto"); $("lock").classList.remove("oculto"); $("senha").focus();
-}
-function mudarSenha() {
-  const at = prompt("Senha atual:"); if (at === null) return;
-  if (hashS(at) !== senhaAtual()) return jadeDiz("Senha atual incorreta. Tentativa patética de me enganar.");
-  const nv = prompt("Nova senha (mínimo 6 caracteres):"); if (!nv) return;
-  if (nv.length < 6) return jadeDiz("Curta demais, Mestre. Escolha algo digno de mim.");
-  try { localStorage.setItem("jade_pw", String(hashS(nv))); } catch (e) {}
-  jadeDiz("Senha alterada.");
-}
 $("senha").addEventListener("keydown", e => { if (e.key === "Enter") tentarSenha(); });
+
 renderChips();
 </script>
 </body>
