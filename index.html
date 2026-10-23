@@ -354,7 +354,26 @@ function alternarWire() {
   grupoProjeto3D && grupoProjeto3D.traverse(n => { if (n.isMesh) n.material.wireframe = wire; });
 }
 
-/* CÉREBRO DA JADE (FLUXO DE ENSINO BLINDADO) */
+/* FUNÇÃO DE PESQUISA NA WIKIPÉDIA */
+async function pesquisarWikipedia(termo) {
+  try {
+    const url = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(termo)}&format=json&origin=*`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.query && data.query.search.length > 0) {
+      const titulo = data.query.search[0].title;
+      const urlResumo = `https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(titulo)}`;
+      const resSum = await fetch(urlResumo);
+      const dataSum = await resSum.json();
+      if (dataSum.extract) {
+        return dataSum.extract;
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
+/* CÉREBRO DA JADE */
 function enviar() {
   const t = inputEl.value.trim(); if (!t) return;
   escrever(t, "user"); inputEl.value = "";
@@ -373,34 +392,31 @@ async function processarMensagemAvancada(t) {
   const tl = t.toLowerCase();
   const tlNormalizado = normalizar(t);
 
-  // 1. VERIFICAR SE JÁ EXISTE NA MEMÓRIA DE APRENDIZADO ANTES DE QUALQUER COISA
+  // 1. APRENDIZADO DO MESTRE (Respostas customizadas)
   if (memoria.aprendizados[tlNormalizado]) {
     return jadeDiz(memoria.aprendizados[tlNormalizado]);
   }
 
-  // 2. GERENCIAMENTO DO MODO DE ENSINO (Passo 1: Salvando a Pergunta)
+  // 2. GERENCIAMENTO DO MODO DE ENSINO
   if (estadoEnsino === 1) {
     perguntaTemporaria = normalizar(t);
     estadoEnsino = 2;
     return jadeDiz("Entendido. Agora me diga: qual deve ser a resposta exata para essa pergunta?");
   }
-  
-  // 3. GERENCIAMENTO DO MODO DE ENSINO (Passo 2: Salvando a Resposta)
   else if (estadoEnsino === 2) {
     const respostaEnsino = t;
     memoria.aprendizados[perguntaTemporaria] = respostaEnsino;
     salvarMemoria();
     estadoEnsino = 0;
-    return jadeDiz(`Aprendido, Mestre! Agora, sempre que você me perguntar "${perguntaTemporaria}", eu responderei: "${respostaEnsino}".`);
+    return jadeDiz(`Aprendido, Mestre! Sempre que você me perguntar "${perguntaTemporaria}", eu responderei: "${respostaEnsino}".`);
   }
 
-  // Iniciar comando de ensino
   if (tl.includes("posso te ensinar") || tl.includes("quero te ensinar") || tl.includes("deixa te ensinar")) {
     estadoEnsino = 1;
     return jadeDiz("Estou pronta, Mestre! Qual é a <b>pergunta</b> que você quer me ensinar?");
   }
 
-  // Comandos normais do sistema
+  // 3. COMANDOS INTERNOS
   if (/meu nome (?:e|é)\s+(.+)/i.test(t)) {
     const m = t.match(/meu nome (?:e|é)\s+(.+)/i);
     if (m && m[1]) {
@@ -425,7 +441,17 @@ async function processarMensagemAvancada(t) {
     return jadeDiz(`O resultado é ${calc}.`);
   }
 
-  return jadeDiz("Entendido, Mestre. Se quiser me ensinar algo novo, diga 'posso te ensinar'.");
+  // 4. SE NÃO FOR NENHUM ACIMA, BUSCAR NA WIKIPÉDIA AUTOMATICAMENTE
+  jadeDiz("Pesquisando na Wikipédia, Mestre...");
+  // Limpa termos de busca comuns como "o que e", "quem foi", etc.
+  let termoBusca = t.replace(/^(o que e|quem foi|fale sobre|fale me sobre|me explique|explique|sobre)\s+/i, "").trim();
+  
+  const resumoWiki = await pesquisarWikipedia(termoBusca || t);
+  if (resumoWiki) {
+    return jadeDiz(resumoWiki);
+  } else {
+    return jadeDiz("Não encontrei informações sobre isso na Wikipédia, Mestre. Mas você pode me ensinar dizendo 'posso te ensinar'.");
+  }
 }
 
 /* RECONHECIMENTO DE VOZ */
